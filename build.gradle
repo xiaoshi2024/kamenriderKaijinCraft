@@ -179,10 +179,14 @@ dependencies {
 //    //mca联动
 //    implementation "maven.modrinth:minecraft-comes-alive-reborn:uZa9ZX7n"
 
-    // 玩家动画库 (PAL) - 参考一人之下模组
-    implementation "curse.maven:player-animation-library-1283899:8454212"
+    //玩家动作api【玩家动画】
+    implementation "maven.modrinth:ha1mEyJS:yjxtkvnD"
 
-    implementation "maven.modrinth:geckolib:lWsXauBN"
+    //假面骑士工艺软联动
+    implementation "maven.modrinth:kLNLtzWr:4ZX8Z7XD"
+
+    implementation "maven.modrinth:8BmcQJ2H:gFmrC8Ru"
+
 
 
     // Example optional mod dependency with JEI

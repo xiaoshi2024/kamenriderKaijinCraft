@@ -45,10 +45,8 @@ public final class BookKaijinRace {
             if (previous.bookKaijin() != state.bookKaijin() || previous.monster() != state.monster()) {
                 refreshAttributes(serverPlayer);
             }
-            // 第一次获得书之怪物种族时，蓝条从满开始
-            if (!previous.bookKaijin() && state.bookKaijin()) {
-                KaijinMana.refill(serverPlayer);
-            }
+            // 注意：重新缔结时不回满叙事值。
+            // 空蓝时把书丢掉再捡回来重新融合，曾经可以无限刷蓝，这里不再重置蓝量。
         }
     }
 
