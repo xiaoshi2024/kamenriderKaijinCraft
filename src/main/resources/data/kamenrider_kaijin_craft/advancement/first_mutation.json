@@ -1,0 +1,25 @@
+{
+  "display": {
+    "icon": {
+      "id": "kamenrider_kaijin_craft:storious_book"
+    },
+    "title": {
+      "translate": "advancements.kamenrider_kaijin_craft.first_mutation.title"
+    },
+    "description": {
+      "translate": "advancements.kamenrider_kaijin_craft.first_mutation.description"
+    },
+    "background": "minecraft:textures/block/blackstone.png",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "mutated": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    ["mutated"]
+  ]
+}

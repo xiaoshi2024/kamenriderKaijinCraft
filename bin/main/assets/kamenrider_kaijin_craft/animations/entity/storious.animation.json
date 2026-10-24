@@ -1,0 +1,498 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"idle": {
+			"loop": true,
+			"animation_length": 1,
+			"bones": {
+				"Head": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [0, -2.5, 0]
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					}
+				},
+				"Head3": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"youjiao": {
+					"rotation": {
+						"vector": [0, -2.5, 0]
+					},
+					"position": {
+						"vector": [-0.8, 0, 0]
+					},
+					"scale": {
+						"vector": [0.75, 0.9, 1]
+					}
+				},
+				"zuojiao2": {
+					"rotation": {
+						"vector": [5.07673, -9.96156, -0.88045]
+					},
+					"position": {
+						"vector": [0.7, 0, 0]
+					},
+					"scale": {
+						"vector": [0.8, 0.9, 1]
+					}
+				},
+				"Body": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"RightArm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [0, 0, 5]
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"vector": [0.2, 0, 0]
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"bone38": {
+					"position": {
+						"vector": [0, 0, 0.9]
+					},
+					"scale": {
+						"vector": [1, 1, 0.69]
+					}
+				},
+				"LeftArm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [0, 0, -7.5]
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"vector": [-0.2, 0, 0]
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"LeftLeg": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"armorLeftBoot": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [0, -0.7, 0]
+						},
+						"1.0": {
+							"vector": [0, 0.7, 0]
+						}
+					},
+					"position": {
+						"vector": [-0.1, 0, 0]
+					},
+					"scale": {
+						"vector": [1, 1, 1]
+					}
+				},
+				"RightLeg": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				}
+			}
+		},
+		"run": {
+			"loop": true,
+			"animation_length": 1.1667,
+			"bones": {
+				"Head": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					}
+				},
+				"armorHead": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [-2.5, 0, 0]
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					}
+				},
+				"Head3": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"youjiao": {
+					"rotation": {
+						"vector": [0, -2.5, 0]
+					},
+					"position": {
+						"vector": [-0.8, 0, 0]
+					},
+					"scale": {
+						"vector": [0.75, 0.9, 1]
+					}
+				},
+				"zuojiao2": {
+					"rotation": {
+						"vector": [5.07673, -9.96156, -0.88045]
+					},
+					"position": {
+						"vector": [0.7, 0, 0]
+					},
+					"scale": {
+						"vector": [0.8, 0.9, 1]
+					}
+				},
+				"Body": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4583": {
+							"vector": [-2.5, 0, 0]
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4583": {
+							"vector": [0, 0, 0.3]
+						}
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"RightArm": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [0.2, 0, 0]
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"bone38": {
+					"position": {
+						"vector": [0, 0, 0.9]
+					},
+					"scale": {
+						"vector": [1, 1, 0.69]
+					}
+				},
+				"LeftArm": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [-0.2, 0, 0]
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"LeftLeg": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4583": {
+							"vector": [12, 0, 0]
+						},
+						"1.0": {
+							"vector": [-12.5, 0, 0]
+						}
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"armorLeftLeg": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [0, 0, 0]
+					},
+					"scale": {
+						"vector": [1, 1, 1]
+					}
+				},
+				"armorLeftBoot": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [-0.1, 0, 0]
+					},
+					"scale": {
+						"vector": [1, 1, 1]
+					}
+				},
+				"RightLeg": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4583": {
+							"vector": [-12, 0, 0]
+						},
+						"1.0": {
+							"vector": [6, 0, 0]
+						}
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"armorRightLeg": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [0, 0, 0]
+					},
+					"scale": {
+						"vector": [1, 1, 1]
+					}
+				},
+				"RightArm2": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [22.5, 0, 0]
+						},
+						"1.0": {
+							"vector": [-20, 0, 0]
+						}
+					}
+				},
+				"LeftArm2": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [-20, 0, 0]
+						},
+						"1.0": {
+							"vector": [20, 0, 0]
+						}
+					}
+				}
+			}
+		},
+		"attack": {
+			"animation_length": 1.7917,
+			"bones": {
+				"Head": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [0, -5, 0]
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					}
+				},
+				"Head3": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"youjiao": {
+					"rotation": {
+						"vector": [0, -2.5, 0]
+					},
+					"position": {
+						"vector": [-0.8, 0, 0]
+					},
+					"scale": {
+						"vector": [0.75, 0.9, 1]
+					}
+				},
+				"zuojiao2": {
+					"rotation": {
+						"vector": [5.07673, -9.96156, -0.88045]
+					},
+					"position": {
+						"vector": [0.7, 0, 0]
+					},
+					"scale": {
+						"vector": [0.8, 0.9, 1]
+					}
+				},
+				"Body": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"RightArm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [-34.0724, 8.53726, 12.37961]
+						},
+						"0.75": {
+							"vector": [-62.26905, 4.29357, 6.15518]
+						},
+						"1.0": {
+							"vector": [-62.35346, -0.13447, 3.83089]
+						},
+						"1.1667": {
+							"vector": [-62.3, -0.13, 3.83]
+						},
+						"1.2083": {
+							"vector": [-52.35346, -0.13447, 3.83089]
+						},
+						"1.5": {
+							"vector": [-27.01796, 4.44351, 12.73014]
+						},
+						"1.75": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"vector": [0.2, 0, 0]
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"armorRightArm": {
+					"rotation": {
+						"0.3333": {
+							"vector": [0, 0, 0]
+						},
+						"0.8333": {
+							"vector": [-22.05239, 2.55868, 19.8423]
+						},
+						"1.625": {
+							"vector": [0, 0, 0]
+						}
+					}
+				},
+				"bone38": {
+					"position": {
+						"vector": [0, 0, 0.9]
+					},
+					"scale": {
+						"vector": [1, 1, 0.69]
+					}
+				},
+				"LeftArm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.5": {
+							"vector": [-73.24765, 7.10337, 0.07436]
+						},
+						"0.75": {
+							"vector": [-63.1, 6.03, -1.36]
+						},
+						"1.0833": {
+							"vector": [-2.22379, -0.39201, -9.99239]
+						},
+						"1.375": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"vector": [-0.2, 0, 0]
+					},
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"armorLeftArm": {
+					"rotation": {
+						"0.5": {
+							"vector": [-2.5, 0, -5]
+						},
+						"1.0": {
+							"vector": [-21.98718, -3.09298, 5.94195]
+						},
+						"1.7917": {
+							"vector": [0, 0, 0]
+						}
+					}
+				},
+				"LeftLeg": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"armorLeftBoot": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [-0.1, 0, 0]
+					},
+					"scale": {
+						"vector": [1, 1, 1]
+					}
+				},
+				"RightLeg": {
+					"scale": {
+						"vector": [0.9, 1, 1]
+					}
+				},
+				"LeftArm2": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					}
+				},
+				"RightArm2": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,20 @@
+{
+  "item.kamenrider_kaijin_craft.storious_book": "Storious Alter Ride Book",
+  "item.kamenrider_kaijin_craft.storious_book.tooltip": "The heart of a Book Kaijin. Open it to let Storious take over your body.",
+  "item.kamenrider_kaijin_craft.storious_book.unbound": "Unbound: the first reading binds it to you alone",
+  "item.kamenrider_kaijin_craft.storious_book.bound": "Bound to %s; only its owner can open it",
+  "itemGroup.kamenrider_kaijin_craft.main": "Kamen Rider Kaijin Craft",
+  "key.categories.kamenrider_kaijin_craft": "Kamen Rider Kaijin Craft",
+  "key.kamenrider_kaijin_craft.toggle_form": "Mimicry / Unleash (Storious)",
+  "message.kamenrider_kaijin_craft.mutate": "The pages turn, red qi coils around you... you have become Storious.",
+  "message.kamenrider_kaijin_craft.unleash": "The Book Kaijin form surfaces once more.",
+  "message.kamenrider_kaijin_craft.mimic": "You fold the monster away and mimic a human.",
+  "message.kamenrider_kaijin_craft.not_book_kaijin": "You are not a Book Kaijin yet.",
+  "message.kamenrider_kaijin_craft.book_bound_other": "This book is bound to %s and cannot be used.",
+  "message.kamenrider_kaijin_craft.book_already_bound": "You already own a bound Alter Ride Book.",
+  "message.kamenrider_kaijin_craft.fusion_occupied": "The Kaijin Fusion slot already holds another mutation item.",
+  "message.kamenrider_kaijin_craft.race_lost": "The mutation item is gone. You revert to a human.",
+  "gui.kamenrider_kaijin_craft.fusion_slot": "Kaijin Fusion slot: insert a mutation item",
+  "advancements.kamenrider_kaijin_craft.first_mutation.title": "Awaken! The Book Monster Who Commands Ancient Poems",
+  "advancements.kamenrider_kaijin_craft.first_mutation.description": "Open the Storious Alter Ride Book for the first time and become a Book Kaijin."
+}

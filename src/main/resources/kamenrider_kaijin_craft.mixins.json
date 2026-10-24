@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.xiaoshi2022.kamenrider_kaijin_craft.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AbstractContainerMenuAccessor",
+    "InventoryMenuMixin"
+  ],
+  "client": [
+    "AbstractContainerScreenAccessor",
+    "CreativeModeInventoryScreenMixin",
+    "SlotAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
