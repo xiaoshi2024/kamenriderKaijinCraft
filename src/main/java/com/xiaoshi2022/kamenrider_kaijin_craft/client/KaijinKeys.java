@@ -14,6 +14,26 @@ public final class KaijinKeys {
             GLFW.GLFW_KEY_G,
             CATEGORY);
 
+    /** 技能盘（V）：按住打开，松开关闭 */
+    public static final KeyMapping SKILL_WHEEL = new KeyMapping(
+            "key.kamenrider_kaijin_craft.skill_wheel",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_V,
+            CATEGORY);
+
+    /** 三个快捷技能槽（1 / 2 / 3），绑定方式与尸兄技能盘一致 */
+    public static final KeyMapping[] QUICK_SKILLS = new KeyMapping[3];
+
+    static {
+        for (int slot = 0; slot < QUICK_SKILLS.length; slot++) {
+            QUICK_SKILLS[slot] = new KeyMapping(
+                    "key.kamenrider_kaijin_craft.quick_skill_" + (slot + 1),
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_1 + slot,
+                    CATEGORY);
+        }
+    }
+
     private KaijinKeys() {
     }
 }

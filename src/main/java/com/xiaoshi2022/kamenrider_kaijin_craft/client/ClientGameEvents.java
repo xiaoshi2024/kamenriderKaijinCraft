@@ -2,10 +2,13 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinSkillRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.QiAuraRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinSkillPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.ToggleFormPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkill;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -24,11 +27,13 @@ public final class ClientGameEvents {
     private ClientGameEvents() {
     }
 
-    /** G 键：请求服务端在拟态与怪人形态之间切换。 */
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         QiAuraRenderer.tick();
+        KaijinSkillRenderer.tick();
         Minecraft minecraft = Minecraft.getInstance();
+
+        // G：拟态 / 解放
         while (KaijinKeys.TOGGLE_FORM.consumeClick()) {
             if (minecraft.player == null || minecraft.screen != null) {
                 continue;
@@ -37,6 +42,34 @@ public final class ClientGameEvents {
                 continue;
             }
             PacketDistributor.sendToServer(ToggleFormPayload.INSTANCE);
+        }
+
+        // V：技能盘（按住打开，松开关闭）
+        while (KaijinKeys.SKILL_WHEEL.consumeClick()) {
+            if (minecraft.player == null) {
+                continue;
+            }
+            if (minecraft.screen instanceof StoriousSkillWheelScreen) {
+                minecraft.setScreen(null);
+            } else if (minecraft.screen == null && BookKaijinRace.isMonster(minecraft.player)) {
+                minecraft.setScreen(new StoriousSkillWheelScreen());
+            }
+        }
+
+        // 1 / 2 / 3：释放快捷技能槽里绑定的技能
+        for (int slot = 0; slot < KaijinKeys.QUICK_SKILLS.length; slot++) {
+            while (KaijinKeys.QUICK_SKILLS[slot].consumeClick()) {
+                if (minecraft.player == null || minecraft.screen != null) {
+                    continue;
+                }
+                if (!BookKaijinRace.isMonster(minecraft.player)) {
+                    continue;
+                }
+                StoriousSkill skill = ClientSkillBindings.getSkill(slot);
+                if (skill != null) {
+                    PacketDistributor.sendToServer(new KaijinSkillPayload(skill.ordinal()));
+                }
+            }
         }
     }
 
@@ -56,7 +89,7 @@ public final class ClientGameEvents {
                 event.getMultiBufferSource(), event.getPackedLight());
     }
 
-    /** 红色气焰 / 气雾：在实体与半透明方块之后画，保证不会被模型挡住。 */
+    /** 红气与技能光效：在实体与半透明方块之后画。 */
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
@@ -68,6 +101,7 @@ public final class ClientGameEvents {
         poseStack.pushPose();
         poseStack.translate(-camera.x, -camera.y, -camera.z);
         QiAuraRenderer.render(poseStack, buffers, event.getPartialTick().getGameTimeDeltaPartialTick(false));
+        KaijinSkillRenderer.render(poseStack, buffers, event.getPartialTick().getGameTimeDeltaPartialTick(false));
         buffers.endBatch();
         poseStack.popPose();
     }
