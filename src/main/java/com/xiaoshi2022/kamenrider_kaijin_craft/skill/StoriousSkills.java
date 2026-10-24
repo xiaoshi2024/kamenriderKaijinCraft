@@ -7,17 +7,24 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.network.DarkBeamPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.QiAuraPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.SkillCooldownPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.KaijinMana;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModEntities;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -48,7 +55,8 @@ public final class StoriousSkills {
     }
 
     public static void use(ServerPlayer player, StoriousSkill skill) {
-        if (!BookKaijinRace.isMonster(player)) {
+        // 拟态成人类时也保留技能：只要还是书之怪物种族即可施放
+        if (!BookKaijinRace.get(player).bookKaijin()) {
             player.displayClientMessage(Component.translatable(
                     "message.kamenrider_kaijin_craft.skill_need_monster"), true);
             return;
@@ -65,8 +73,14 @@ public final class StoriousSkills {
                     new SkillCooldownPayload(skill.ordinal(), (int) (readyAt - now)));
             return;
         }
+        if (!KaijinMana.hasEnough(player, skill.manaCost)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.kamenrider_kaijin_craft.mana_not_enough"), true);
+            return;
+        }
         cooldowns.put(skill, now + skill.cooldownTicks);
         PacketDistributor.sendToPlayer(player, new SkillCooldownPayload(skill.ordinal(), skill.cooldownTicks));
+        boolean depleted = KaijinMana.consume(player, skill.manaCost);
 
         switch (skill) {
             case DARK_ARROW -> darkArrow(player);
@@ -75,15 +89,41 @@ public final class StoriousSkills {
             case CLONES -> clones(player);
             case BLINK -> blink(player);
         }
+
+        // 蓝条见底：这一发技能照常结算，随后怪人道具爆裂
+        if (depleted) {
+            KaijinMana.explode(player);
+        }
     }
 
     // ==================== 黑暗能量箭 ====================
 
     private static void darkArrow(ServerPlayer player) {
-        BeamHit hit = beam(player, 24.0D, 1.4D, 12.0F, true);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new DarkBeamPayload(
-                player.getId(), hit.origin(), hit.direction(), (float) hit.length(), 0, 8));
         ServerLevel level = player.serverLevel();
+        BeamHit hit = beam(player, 26.0D, 1.5D, 20.0F, true);
+        for (LivingEntity target : hit.hits()) {
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1), player);
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1), player);
+        }
+
+        // 光束尽头引爆：没被光束贯穿命中的敌人再吃一次范围伤害
+        Vec3 impact = hit.origin().add(hit.direction().scale(hit.length()));
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
+                new AABB(impact, impact).inflate(2.6D), e -> e != player && e.isAlive())) {
+            if (hit.hits().contains(target)) {
+                continue;
+            }
+            target.hurt(player.damageSources().playerAttack(player), 10.0F);
+            Vec3 push = target.position().subtract(impact);
+            if (push.lengthSqr() > 0.01D) {
+                push = push.normalize().scale(0.6D);
+                target.push(push.x, 0.35D, push.z);
+                target.hurtMarked = true;
+            }
+        }
+
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new DarkBeamPayload(
+                player.getId(), hit.origin(), hit.direction(), (float) hit.length(), 0, 12));
         level.playSound(null, player.blockPosition(), SoundEvents.EVOKER_CAST_SPELL,
                 SoundSource.PLAYERS, 1.2F, 0.7F);
         level.playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE,
@@ -93,13 +133,21 @@ public final class StoriousSkills {
     // ==================== 失明光线 ====================
 
     private static void blindingRay(ServerPlayer player) {
-        BeamHit hit = beam(player, 16.0D, 1.2D, 2.0F, false);
+        BeamHit hit = beam(player, 20.0D, 1.4D, 9.0F, false);
         for (LivingEntity target : hit.hits()) {
-            target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 120, 0), player);
-            target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0), player);
+            target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 240, 0), player);
+            target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 0), player);
+            target.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0), player);
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 1), player);
+            target.push(hit.direction().x * 0.5D, 0.2D, hit.direction().z * 0.5D);
+            target.hurtMarked = true;
         }
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new DarkBeamPayload(
-                player.getId(), hit.origin(), hit.direction(), (float) hit.length(), 1, 10));
+                player.getId(), hit.origin(), hit.direction(), (float) hit.length(), 1, 12));
+        // 剧情交互：用致盲光线命中对手 → 叙事回蓝
+        if (!hit.hits().isEmpty()) {
+            KaijinMana.award(player, "control", 8.0F, 30);
+        }
         ServerLevel level = player.serverLevel();
         level.playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE,
                 SoundSource.PLAYERS, 1.0F, 1.9F);
@@ -114,36 +162,38 @@ public final class StoriousSkills {
         Vec3 look = player.getLookAngle();
         List<LivingEntity> targets = new ArrayList<>();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
-                player.getBoundingBox().inflate(6.0D), e -> e != player && e.isAlive())) {
+                player.getBoundingBox().inflate(7.0D), e -> e != player && e.isAlive())) {
             Vec3 offset = target.position().subtract(player.position());
-            if (offset.lengthSqr() > 36.0D) {
+            if (offset.lengthSqr() > 49.0D) {
                 continue;
             }
-            if (offset.lengthSqr() > 0.01D && offset.normalize().dot(look) < 0.35D) {
+            if (offset.lengthSqr() > 0.01D && offset.normalize().dot(look) < 0.3D) {
                 continue;
             }
             targets.add(target);
-            if (targets.size() >= 3) {
+            if (targets.size() >= 5) {
                 break;
             }
         }
 
         for (LivingEntity target : targets) {
-            target.hurt(player.damageSources().playerAttack(player), 2.0F);
-            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2), player);
-            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 60, 1), player);
+            target.hurt(player.damageSources().playerAttack(player), 8.0F);
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 2), player);
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 1), player);
             Vec3 pull = player.position().add(0.0D, 0.2D, 0.0D).subtract(target.position());
             if (pull.lengthSqr() > 0.01D) {
-                pull = pull.normalize().scale(0.35D);
-                target.push(pull.x, 0.12D, pull.z);
+                pull = pull.normalize().scale(0.5D);
+                target.push(pull.x, 0.18D, pull.z);
                 target.hurtMarked = true;
             }
         }
 
         if (!targets.isEmpty()) {
+            // 剧情交互：用触手控住对手 → 叙事回蓝
+            KaijinMana.award(player, "control", 8.0F, 30);
             int[] ids = targets.stream().mapToInt(Entity::getId).toArray();
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                    new AntlerTendrilsPayload(player.getId(), ids, 30));
+                    new AntlerTendrilsPayload(player.getId(), ids, 40));
         }
         level.playSound(null, player.blockPosition(), SoundEvents.SHULKER_BULLET_HIT,
                 SoundSource.PLAYERS, 1.0F, 0.8F);
@@ -163,7 +213,7 @@ public final class StoriousSkills {
             double z = player.getZ() + Math.cos(angle) * 1.8D;
             clone.moveTo(x, player.getY(), z, player.getYRot(), 0.0F);
             clone.setOwner(player.getUUID());
-            clone.setLife(160);
+            clone.setLife(240);
             level.addFreshEntity(clone);
         }
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
@@ -174,24 +224,117 @@ public final class StoriousSkills {
 
     // ==================== 瞬间传送 ====================
 
+    /** 落点向下找地面的最大搜索深度。 */
+    private static final double BLINK_GROUND_SEARCH = 48.0D;
+
     private static void blink(ServerPlayer player) {
+        // 潜行 + 瞬移：不看向哪里，直接撕开空间回到出生点
+        if (player.isShiftKeyDown()) {
+            blinkToSpawn(player);
+            return;
+        }
         ServerLevel level = player.serverLevel();
         Vec3 start = player.position();
+        // 身后有怪正盯着自己时用瞬移脱离，算一次「躲开攻击」的剧情交互
+        boolean threatened = !level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(8.0D),
+                mob -> mob.isAlive() && mob.getTarget() == player).isEmpty();
         Vec3 direction = player.getLookAngle();
-        Vec3 intended = start.add(direction.scale(12.0D));
-        BlockHitResult blockHit = level.clip(new ClipContext(start.add(0.0D, 1.0D, 0.0D), intended,
+        Vec3 eye = player.getEyePosition();
+        // 沿视线一直射到「看得见的最远处」，撞墙则停在墙前
+        Vec3 intended = eye.add(direction.scale(maxBlinkDistance(player)));
+        BlockHitResult blockHit = level.clip(new ClipContext(eye, intended,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        Vec3 destination = blockHit.getType() == HitResult.Type.MISS
+        Vec3 endpoint = blockHit.getType() == HitResult.Type.MISS
                 ? intended
-                : blockHit.getLocation().subtract(direction.scale(1.0D));
+                : blockHit.getLocation().subtract(direction.scale(1.5D));
+        Vec3 destination = clingToGround(level, player, endpoint);
 
         player.teleportTo(destination.x, destination.y, destination.z);
+        player.resetFallDistance();
+
+        // 落点撕裂：范围内的敌人受到伤害并被推离
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(3.0D), e -> e != player && e.isAlive())) {
+            target.hurt(player.damageSources().playerAttack(player), 10.0F);
+            Vec3 push = target.position().subtract(destination);
+            if (push.lengthSqr() > 0.01D) {
+                push = push.normalize().scale(0.8D);
+                target.push(push.x, 0.4D, push.z);
+                target.hurtMarked = true;
+            }
+        }
+
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
                 -1, "mutate_mist", start, BookKaijinRace.QI_COLOR, 1.6F, 25));
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
                 -1, "mutate_mist", destination, BookKaijinRace.QI_COLOR, 1.6F, 25));
+        if (threatened) {
+            KaijinMana.award(player, "dodge", 10.0F, 60);
+        }
         level.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
                 SoundSource.PLAYERS, 1.0F, 1.2F);
+    }
+
+    /** 瞬移距离跟着客户端渲染距离走，最远刚好贴住「看得见」的边界。 */
+    private static double maxBlinkDistance(ServerPlayer player) {
+        int chunks = Mth.clamp(player.requestedViewDistance(), 4, 16);
+        return chunks * 16.0D - 16.0D;
+    }
+
+    /**
+     * 把落点吸附到下方地面：向落点下方的方块做一次射线，
+     * 命中就站在方块顶面，避免传送到半空或直接嵌进山体。
+     */
+    private static Vec3 clingToGround(ServerLevel level, ServerPlayer player, Vec3 point) {
+        BlockHitResult ground = level.clip(new ClipContext(point.add(0.0D, 2.0D, 0.0D),
+                point.add(0.0D, -BLINK_GROUND_SEARCH, 0.0D),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        Vec3 feet = ground.getType() == HitResult.Type.MISS
+                ? point
+                : ground.getLocation().add(0.0D, 0.05D, 0.0D);
+        // 落点顶部被卡住时往上抬，直到玩家的碰撞箱放得下
+        AABB box = player.getBoundingBox().move(feet.subtract(player.position()));
+        for (int attempt = 0; attempt < 4 && !level.noCollision(player, box); attempt++) {
+            feet = feet.add(0.0D, 1.0D, 0.0D);
+            box = box.move(0.0D, 1.0D, 0.0D);
+        }
+        return feet;
+    }
+
+    /** 潜行瞬移：回到床 / 重生锚记录的重生点，没有记录则回到主世界出生点。 */
+    private static void blinkToSpawn(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        ResourceKey<Level> dimension = player.getRespawnDimension();
+        BlockPos respawn = player.getRespawnPosition();
+        ServerLevel targetLevel = dimension == null ? null : server.getLevel(dimension);
+        if (targetLevel == null || respawn == null) {
+            targetLevel = server.overworld();
+            respawn = targetLevel.getSharedSpawnPos();
+        }
+
+        ServerLevel sourceLevel = player.serverLevel();
+        Vec3 start = player.position();
+        Vec3 destination = clingToGround(targetLevel, player, Vec3.atBottomCenterOf(respawn));
+
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                -1, "mutate_mist", start, BookKaijinRace.QI_COLOR, 1.6F, 25));
+        sourceLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
+                SoundSource.PLAYERS, 1.0F, 0.6F);
+
+        player.stopRiding();
+        player.teleportTo(targetLevel, destination.x, destination.y, destination.z,
+                player.getYRot(), player.getXRot());
+        player.resetFallDistance();
+
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                -1, "mutate_mist", destination, BookKaijinRace.QI_COLOR, 1.6F, 25));
+        targetLevel.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
+                SoundSource.PLAYERS, 1.0F, 1.2F);
+        player.displayClientMessage(Component.translatable(
+                "message.kamenrider_kaijin_craft.blink_spawn"), true);
     }
 
     // ==================== 光束结算 ====================

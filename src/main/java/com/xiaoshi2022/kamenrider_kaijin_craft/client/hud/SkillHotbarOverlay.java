@@ -36,7 +36,7 @@ public final class SkillHotbarOverlay {
         if (player == null || minecraft.options.hideGui || player.isSpectator()) {
             return;
         }
-        if (!BookKaijinRace.isMonster(player)) {
+        if (!BookKaijinRace.get(player).bookKaijin()) {
             return;
         }
 

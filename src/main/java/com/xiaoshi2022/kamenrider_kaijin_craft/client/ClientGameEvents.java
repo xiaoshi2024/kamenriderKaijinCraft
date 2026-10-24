@@ -18,6 +18,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderArmEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -51,7 +52,7 @@ public final class ClientGameEvents {
             }
             if (minecraft.screen instanceof StoriousSkillWheelScreen) {
                 minecraft.setScreen(null);
-            } else if (minecraft.screen == null && BookKaijinRace.isMonster(minecraft.player)) {
+            } else if (minecraft.screen == null && BookKaijinRace.get(minecraft.player).bookKaijin()) {
                 minecraft.setScreen(new StoriousSkillWheelScreen());
             }
         }
@@ -62,7 +63,7 @@ public final class ClientGameEvents {
                 if (minecraft.player == null || minecraft.screen != null) {
                     continue;
                 }
-                if (!BookKaijinRace.isMonster(minecraft.player)) {
+                if (!BookKaijinRace.get(minecraft.player).bookKaijin()) {
                     continue;
                 }
                 StoriousSkill skill = ClientSkillBindings.getSkill(slot);
@@ -87,6 +88,30 @@ public final class ClientGameEvents {
         event.setCanceled(true);
         renderer.render(clientPlayer, clientPlayer.getYRot(), event.getPartialTick(), event.getPoseStack(),
                 event.getMultiBufferSource(), event.getPackedLight());
+    }
+
+    /** 变异后第一人称：只画怪人模型的当前手臂，替换原版手臂。 */
+    @SubscribeEvent
+    public static void onRenderArm(RenderArmEvent event) {
+        AbstractClientPlayer player = event.getPlayer();
+        if (!BookKaijinRace.isMonster(player)) {
+            return;
+        }
+        StoriousBodyRenderer renderer = StoriousBodyRenderer.get(player);
+        if (renderer == null) {
+            return;
+        }
+        event.setCanceled(true);
+
+        float partialTick = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+        PoseStack poseStack = event.getPoseStack();
+        poseStack.pushPose();
+        try {
+            renderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
+                    event.getMultiBufferSource(), event.getPackedLight());
+        } finally {
+            poseStack.popPose();
+        }
     }
 
     /** 红气与技能光效：在实体与半透明方块之后画。 */

@@ -25,7 +25,7 @@ public final class StoriousAnimatable implements GeoAnimatable {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private float partialTick;
 
-    void setPartialTick(float partialTick) {
+    public void setPartialTick(float partialTick) {
         this.partialTick = partialTick;
     }
 

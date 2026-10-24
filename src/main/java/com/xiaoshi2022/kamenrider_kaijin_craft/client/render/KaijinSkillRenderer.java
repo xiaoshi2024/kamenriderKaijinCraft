@@ -118,60 +118,103 @@ public final class KaijinSkillRenderer {
         Vec3 direction = beam.direction;
         Vec3 side = perpendicular(direction);
         Vec3 up = side.cross(direction).normalize();
-        int segments = Math.max(6, (int) (beam.length / 0.5D));
-        float muzzle = 1.0F - (float) Math.min(1.0D, age / 3.0D);
+        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 
-        // 共享 BufferSource 同一时刻只保留一个非 fixed builder：
-        // 先写完所有黑色外壳，再取发光 builder 写核心，不能交替持有两个 consumer。
-        if (beam.style == 0) {
-            VertexConsumer dark = buffers.getBuffer(RenderType.entityCutoutNoCull(SOLID_WHITE));
-            for (int index = 0; index < segments; index++) {
-                double distance = 0.4D + index * 0.5D;
-                if (distance > beam.length) {
-                    break;
-                }
-                float noise = hash(index * 37 + beam.playerId);
-                float noise2 = hash(index * 19 + 11);
-                Vec3 center = beam.origin.add(direction.scale(distance))
-                        .add(side.scale((noise - 0.5D) * 0.85D))
-                        .add(up.scale((noise2 - 0.5D) * 0.85D));
-                float half = 0.40F + 0.38F * noise;
-                int shade = 6 + (int) (noise * 26);
-                box(dark, pose, center, half, shade, 3, 6, 255);
-            }
-            if (muzzle > 0.0F) {
-                box(dark, pose, beam.origin, 0.55F * muzzle + 0.2F, 12, 4, 8, 255);
-            }
-        }
+        // 前 2 tick 光束从枪口快速伸出，之后保持全长
+        float extend = (float) Math.min(1.0D, age / 2.0D);
+        float pulse = 0.9F + 0.1F * (float) Math.sin(age * 1.7D + beam.playerId);
+
+        Vec3 start = beam.origin.add(direction.scale(0.25D));
+        Vec3 end = beam.origin.add(direction.scale(beam.length * extend));
+        boolean dark = beam.style == 0;
 
         VertexConsumer glow = buffers.getBuffer(RenderType.entityTranslucentEmissive(SOLID_WHITE));
-        for (int index = 0; index < segments; index++) {
-            double distance = 0.4D + index * 0.5D;
-            if (distance > beam.length) {
-                break;
-            }
+
+        // 由外到内叠四层面向相机的光带：深色轮廓 -> 红色辉光 -> 亮红 -> 白色核心
+        if (dark) {
+            ribbon(glow, pose, start, end, camera, 0.62F * pulse, 0.02F, 26, 2, 8, (int) (230 * fade));
+            ribbon(glow, pose, start, end, camera, 0.46F * pulse, 0.04F, 255, 32, 48, (int) (170 * fade));
+            ribbon(glow, pose, start, end, camera, 0.28F * pulse, 0.06F, 255, 88, 96, (int) (215 * fade));
+            ribbon(glow, pose, start, end, camera, 0.12F, 0.08F, 255, 248, 248, (int) (255 * fade));
+        } else {
+            ribbon(glow, pose, start, end, camera, 0.40F * pulse, 0.02F, 255, 210, 225, (int) (170 * fade));
+            ribbon(glow, pose, start, end, camera, 0.22F, 0.04F, 255, 240, 255, (int) (220 * fade));
+            ribbon(glow, pose, start, end, camera, 0.10F, 0.06F, 255, 255, 255, (int) (255 * fade));
+        }
+
+        // 沿光束漂浮的像素碎块（截图里那种块状高光）
+        int specks = Math.max(8, (int) (beam.length * 2.0D));
+        for (int index = 0; index < specks; index++) {
+            float t = (index + 0.5F) / specks * extend;
             float noise = hash(index * 37 + beam.playerId);
             float noise2 = hash(index * 19 + 11);
-            Vec3 center = beam.origin.add(direction.scale(distance))
-                    .add(side.scale((noise - 0.5D) * 0.85D))
-                    .add(up.scale((noise2 - 0.5D) * 0.85D));
-            float half = 0.40F + 0.38F * noise;
-
-            if (beam.style == 0) {
-                if (noise2 > 0.72F) {
-                    box(glow, pose, center, half * 0.6F, 190, 10, 26, (int) (255 * fade));
+            Vec3 center = beam.origin.add(direction.scale(beam.length * t))
+                    .add(side.scale((noise - 0.5D) * 1.5D))
+                    .add(up.scale((noise2 - 0.5D) * 1.5D));
+            float size = 0.05F + 0.11F * noise2;
+            if (dark) {
+                if (noise > 0.55F) {
+                    box(glow, pose, center, size, 255, 245, 245, (int) (255 * fade));
+                } else {
+                    box(glow, pose, center, size, 255, 60, 70, (int) (200 * fade));
                 }
             } else {
-                box(glow, pose, center, half * 0.55F, 255, 70, 80, (int) (170 * fade));
+                box(glow, pose, center, size, 255, 235, 250, (int) (220 * fade));
             }
+        }
 
-            float coreHalf = beam.style == 0 ? 0.15F + 0.06F * noise : 0.10F;
-            Vec3 core = beam.origin.add(direction.scale(distance));
-            box(glow, pose, core, coreHalf, 255, 246, 246, (int) (255 * fade));
-        }
+        // 枪口闪光
+        float muzzle = 1.0F - (float) Math.min(1.0D, age / 6.0D);
         if (muzzle > 0.0F) {
-            box(glow, pose, beam.origin, 0.35F * muzzle + 0.1F, 255, 225, 225, (int) (255 * fade * muzzle));
+            box(glow, pose, beam.origin.add(direction.scale(0.3D)), 0.45F * muzzle + 0.15F,
+                    255, 240, 240, (int) (255 * fade * muzzle));
         }
+
+        // 命中点的爆闪
+        if (extend >= 1.0F) {
+            float burst = 1.0F - (float) Math.min(1.0D, (age - 2.0D) / 6.0D);
+            if (burst > 0.0F) {
+                box(glow, pose, end, 0.3F + 0.4F * burst, 255, 120, 120, (int) (220 * burst * fade));
+            }
+        }
+    }
+
+    /**
+     * 画一条面向相机的光带：宽度方向同时垂直于光束与视线，
+     * {@code forward} 把内层稍微推向相机，避免多层同深度互相遮挡。
+     */
+    private static void ribbon(VertexConsumer out, Matrix4f pose, Vec3 from, Vec3 to, Vec3 camera,
+                               float half, float forward, int r, int g, int b, int a) {
+        Vec3 delta = to.subtract(from);
+        double length = delta.length();
+        if (length < 1.0E-4D || a <= 0) {
+            return;
+        }
+        Vec3 dir = delta.scale(1.0D / length);
+        Vec3 view = camera.subtract(from.add(to).scale(0.5D));
+        if (view.lengthSqr() < 1.0E-6D) {
+            return;
+        }
+        view = view.normalize();
+        Vec3 right = dir.cross(view);
+        if (right.lengthSqr() < 1.0E-6D) {
+            return;
+        }
+        right = right.normalize().scale(half);
+        Vec3 push = view.scale(forward);
+
+        Vec3 a1 = from.add(push).subtract(right);
+        Vec3 a2 = from.add(push).add(right);
+        Vec3 b1 = to.add(push).subtract(right);
+        Vec3 b2 = to.add(push).add(right);
+        float nx = (float) -view.x;
+        float ny = (float) -view.y;
+        float nz = (float) -view.z;
+
+        vertex(out, pose, (float) a1.x, (float) a1.y, (float) a1.z, 0.0F, 1.0F, r, g, b, a, nx, ny, nz);
+        vertex(out, pose, (float) b1.x, (float) b1.y, (float) b1.z, 1.0F, 1.0F, r, g, b, a, nx, ny, nz);
+        vertex(out, pose, (float) b2.x, (float) b2.y, (float) b2.z, 1.0F, 0.0F, r, g, b, a, nx, ny, nz);
+        vertex(out, pose, (float) a2.x, (float) a2.y, (float) a2.z, 0.0F, 0.0F, r, g, b, a, nx, ny, nz);
     }
 
     // ==================== 鹿角卷须 ====================

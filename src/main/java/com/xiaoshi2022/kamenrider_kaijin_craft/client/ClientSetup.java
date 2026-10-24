@@ -2,6 +2,8 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.BookHeartOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinHealthOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinManaOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.SkillHotbarOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousCloneRenderer;
@@ -18,6 +20,8 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 @EventBusSubscriber(modid = KaijinMOD.MOD_ID, value = Dist.CLIENT)
 public final class ClientSetup {
     private static final ResourceLocation BOOK_HEART_LAYER = KaijinMOD.id("book_heart");
+    private static final ResourceLocation KAIJIN_HEALTH_LAYER = KaijinMOD.id("kaijin_health");
+    private static final ResourceLocation KAIJIN_MANA_LAYER = KaijinMOD.id("kaijin_mana");
     private static final ResourceLocation SKILL_HOTBAR_LAYER = KaijinMOD.id("skill_hotbar");
 
     private ClientSetup() {
@@ -45,6 +49,8 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, BOOK_HEART_LAYER, BookHeartOverlay::render);
+        event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, KAIJIN_HEALTH_LAYER, KaijinHealthOverlay::render);
+        event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, KAIJIN_MANA_LAYER, KaijinManaOverlay::render);
         event.registerAboveAll(SKILL_HOTBAR_LAYER, SkillHotbarOverlay::render);
     }
 }
