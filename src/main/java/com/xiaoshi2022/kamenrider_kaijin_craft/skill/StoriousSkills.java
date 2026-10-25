@@ -103,6 +103,7 @@ public final class StoriousSkills {
             case CLONES -> clones(player);
             case BLINK -> blink(player);
             case DEVOUR -> devour(player, type);
+            case DEVOUR_SPACE -> devourSpace(player, type);
         }
 
         // 蓝条见底：这一发技能照常结算，随后怪人道具爆裂
@@ -300,16 +301,16 @@ public final class StoriousSkills {
      * 把落点吸附到下方地面：向落点下方的方块做一次射线，
      * 命中就站在方块顶面，避免传送到半空或直接嵌进山体。
      */
-    private static Vec3 clingToGround(ServerLevel level, ServerPlayer player, Vec3 point) {
+    private static Vec3 clingToGround(ServerLevel level, Entity entity, Vec3 point) {
         BlockHitResult ground = level.clip(new ClipContext(point.add(0.0D, 2.0D, 0.0D),
                 point.add(0.0D, -BLINK_GROUND_SEARCH, 0.0D),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
         Vec3 feet = ground.getType() == HitResult.Type.MISS
                 ? point
                 : ground.getLocation().add(0.0D, 0.05D, 0.0D);
-        // 落点顶部被卡住时往上抬，直到玩家的碰撞箱放得下
-        AABB box = player.getBoundingBox().move(feet.subtract(player.position()));
-        for (int attempt = 0; attempt < 4 && !level.noCollision(player, box); attempt++) {
+        // 落点顶部被卡住时往上抬，直到实体的碰撞箱放得下
+        AABB box = entity.getBoundingBox().move(feet.subtract(entity.position()));
+        for (int attempt = 0; attempt < 4 && !level.noCollision(entity, box); attempt++) {
             feet = feet.add(0.0D, 1.0D, 0.0D);
             box = box.move(0.0D, 1.0D, 0.0D);
         }
@@ -444,6 +445,137 @@ public final class StoriousSkills {
             eaten++;
         }
         return eaten;
+    }
+
+    // ==================== 吞噬空间（卡律布狄斯） ====================
+
+    /** 吞噬空间的搜索 / 赶路距离。 */
+    private static final double SPACE_GRIND_RANGE = 20.0D;
+    /** 贴到猎物身前时留出的空隙，避免落点卡进对方身体。 */
+    private static final double SPACE_GRIND_GAP = 1.1D;
+    /** 视线锥：只磨削正前方一条走廊里的目标。 */
+    private static final double SPACE_GRIND_CONE = 0.55D;
+
+    /**
+     * 吞噬空间：把正前方那一截空间整个磨掉。
+     * <p>
+     * 前方有生物时，它和自己之间的空间被啃穿，目标整个被拽到面前；
+     * 没有目标时磨掉自己正前方的空间，用来直线赶路。
+     * 途中的方块仍旧阻挡，落点复用瞬移的地面吸附逻辑。
+     */
+    private static void devourSpace(ServerPlayer player, BookKaijinType type) {
+        ServerLevel level = player.serverLevel();
+        Vec3 look = player.getLookAngle();
+        LivingEntity prey = nearestAhead(level, player, look);
+
+        if (prey != null) {
+            pullPrey(player, level, type, prey, look);
+            return;
+        }
+
+        Vec3 start = player.position();
+        Vec3 intended = player.getEyePosition().add(look.scale(SPACE_GRIND_RANGE));
+        Vec3 destination = grindEndpoint(level, player, intended);
+        if (destination.distanceToSqr(start) < 0.25D) {
+            player.displayClientMessage(Component.translatable(
+                    "message.kamenrider_kaijin_craft.devour_space_blocked"), true);
+            return;
+        }
+
+        grindMarks(player, type, start, destination);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                -1, "mutate_mist", start, type.qiColor(), 1.6F, 22));
+
+        player.teleportTo(destination.x, destination.y, destination.z);
+        player.resetFallDistance();
+
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                -1, "mutate_mist", destination, type.qiColor(), 1.6F, 22));
+        finishGrind(player, level);
+    }
+
+    /** 磨掉猎物与自身之间的空间，把它整个拽到面前。 */
+    private static void pullPrey(ServerPlayer player, ServerLevel level, BookKaijinType type,
+                                 LivingEntity prey, Vec3 look) {
+        Vec3 from = prey.position();
+        Vec3 forward = new Vec3(look.x, 0.0D, look.z);
+        forward = forward.lengthSqr() > 1.0E-4D
+                ? forward.normalize()
+                : new Vec3(0.0D, 0.0D, 1.0D);
+        Vec3 point = player.position().add(forward.scale(1.2D
+                + (player.getBbWidth() + prey.getBbWidth()) * 0.5D));
+        Vec3 destination = clingToGround(level, prey, point);
+
+        prey.stopRiding();
+        prey.teleportTo(destination.x, destination.y, destination.z);
+        prey.resetFallDistance();
+        prey.hurtMarked = true;
+
+        grindMarks(player, type, from, destination);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                -1, "mutate_mist", from, type.qiColor(), 1.6F, 22));
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                -1, "mutate_mist", destination, type.qiColor(), 1.6F, 22));
+        finishGrind(player, level);
+    }
+
+    /** 被磨掉的那段空间上留下一串紫色裂口。 */
+    private static void grindMarks(ServerPlayer player, BookKaijinType type, Vec3 from, Vec3 to) {
+        Vec3 span = to.subtract(from);
+        int marks = Mth.clamp((int) Math.round(span.length() / 3.0D), 1, 6);
+        for (int index = 1; index <= marks; index++) {
+            Vec3 point = from.add(span.scale(index / (double) (marks + 1)));
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                    -1, "slime_splash", point, type.qiColor(), 1.15F, 18));
+        }
+    }
+
+    /** 收尾：eat 动作 + 空间被啃穿的音效。 */
+    private static void finishGrind(ServerPlayer player, ServerLevel level) {
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                new KaijinAnimationPayload(player.getId(), "eat", 35));
+        level.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
+                SoundSource.PLAYERS, 1.0F, 0.7F);
+        level.playSound(null, player.blockPosition(), SoundEvents.SLIME_ATTACK,
+                SoundSource.PLAYERS, 0.9F, 0.6F);
+    }
+
+    /** 正前方视线锥内最近的生物；贴脸的目标不算，避免「原地磨削」。 */
+    private static LivingEntity nearestAhead(ServerLevel level, ServerPlayer player, Vec3 look) {
+        LivingEntity best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(SPACE_GRIND_RANGE),
+                e -> e != player && e.isAlive()
+                        && !(e instanceof Player other && other.isSpectator()))) {
+            Vec3 offset = target.position().subtract(player.position());
+            double distance = offset.length();
+            if (distance < SPACE_GRIND_GAP + 1.0D || distance > SPACE_GRIND_RANGE
+                    || distance >= bestDistance) {
+                continue;
+            }
+            if (offset.normalize().dot(look) < SPACE_GRIND_CONE) {
+                continue;
+            }
+            best = target;
+            bestDistance = distance;
+        }
+        return best;
+    }
+
+    /** 沿被磨掉的方向取落点：撞墙就停在墙前，最后吸附到地面。 */
+    private static Vec3 grindEndpoint(ServerLevel level, ServerPlayer player, Vec3 intended) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 delta = intended.subtract(eye);
+        if (delta.lengthSqr() < 1.0E-6D) {
+            return player.position();
+        }
+        BlockHitResult blockHit = level.clip(new ClipContext(eye, intended,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        Vec3 endpoint = blockHit.getType() == HitResult.Type.MISS
+                ? intended
+                : blockHit.getLocation().subtract(delta.normalize().scale(1.0D));
+        return clingToGround(level, player, endpoint);
     }
 
     // ==================== 光束结算 ====================

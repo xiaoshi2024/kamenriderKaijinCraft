@@ -6,7 +6,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
  * 书之怪人形态的技能，与客户端按键一一对应。
  * <p>
  * {@code onlyFor} 决定这个技能属于哪只书之怪人：技能盘只显示当前形态自己的技能，
- * 服务端也会拒绝不属于当前形态的施放请求。目前斯特利乌斯 5 个、卡律布狄斯只有吞噬。
+ * 服务端也会拒绝不属于当前形态的施放请求。目前斯特利乌斯 5 个、卡律布狄斯 2 个。
  */
 public enum StoriousSkill {
     /** 徒手制造黑色 / 深红色的黑暗能量箭 */
@@ -20,7 +20,9 @@ public enum StoriousSkill {
     /** 瞬间传送 */
     BLINK(100, 20, BookKaijinType.STORIOUS),
     /** 卡律布狄斯：黏液把前方的敌人整个吞下 */
-    DEVOUR(200, 25, BookKaijinType.CHARYBDIS);
+    DEVOUR(200, 25, BookKaijinType.CHARYBDIS),
+    /** 卡律布狄斯：磨掉正前方一段空间，贴到目标身前或直接赶路 */
+    DEVOUR_SPACE(80, 18, BookKaijinType.CHARYBDIS);
 
     public final int cooldownTicks;
     /** 施放一次消耗的叙事值（蓝量）。 */
