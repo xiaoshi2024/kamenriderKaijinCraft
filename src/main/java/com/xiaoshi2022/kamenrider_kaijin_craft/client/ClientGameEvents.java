@@ -2,16 +2,19 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinSkillRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.QiAuraRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinSkillPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.ToggleFormPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
 import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkill;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -67,18 +70,34 @@ public final class ClientGameEvents {
                     continue;
                 }
                 StoriousSkill skill = ClientSkillBindings.getSkill(slot);
-                if (skill != null) {
-                    PacketDistributor.sendToServer(new KaijinSkillPayload(skill.ordinal()));
+                if (skill == null) {
+                    continue;
                 }
+                if (!skill.availableFor(BookKaijinRace.typeOf(minecraft.player))) {
+                    minecraft.player.displayClientMessage(Component.translatable(
+                            "message.kamenrider_kaijin_craft.skill_wrong_form"), true);
+                    continue;
+                }
+                PacketDistributor.sendToServer(new KaijinSkillPayload(skill.ordinal()));
             }
         }
     }
 
-    /** 怪人形态：整身替换成斯特利乌斯。 */
+    /** 怪人形态：整身替换成对应的书之怪人。 */
     @SubscribeEvent
     public static void onRenderPlayer(RenderPlayerEvent.Pre event) {
         Player player = event.getEntity();
         if (!(player instanceof AbstractClientPlayer clientPlayer) || !BookKaijinRace.isMonster(clientPlayer)) {
+            return;
+        }
+        if (BookKaijinRace.typeOf(clientPlayer) == BookKaijinType.CHARYBDIS) {
+            CharybdisBodyRenderer charybdis = CharybdisBodyRenderer.get(clientPlayer);
+            if (charybdis == null) {
+                return;
+            }
+            event.setCanceled(true);
+            charybdis.render(clientPlayer, clientPlayer.getYRot(), event.getPartialTick(), event.getPoseStack(),
+                    event.getMultiBufferSource(), event.getPackedLight());
             return;
         }
         StoriousBodyRenderer renderer = StoriousBodyRenderer.get(clientPlayer);
@@ -97,8 +116,10 @@ public final class ClientGameEvents {
         if (!BookKaijinRace.isMonster(player)) {
             return;
         }
-        StoriousBodyRenderer renderer = StoriousBodyRenderer.get(player);
-        if (renderer == null) {
+        boolean charybdis = BookKaijinRace.typeOf(player) == BookKaijinType.CHARYBDIS;
+        StoriousBodyRenderer storiousRenderer = charybdis ? null : StoriousBodyRenderer.get(player);
+        CharybdisBodyRenderer charybdisRenderer = charybdis ? CharybdisBodyRenderer.get(player) : null;
+        if (storiousRenderer == null && charybdisRenderer == null) {
             return;
         }
         event.setCanceled(true);
@@ -107,8 +128,13 @@ public final class ClientGameEvents {
         PoseStack poseStack = event.getPoseStack();
         poseStack.pushPose();
         try {
-            renderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
-                    event.getMultiBufferSource(), event.getPackedLight());
+            if (charybdisRenderer != null) {
+                charybdisRenderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
+                        event.getMultiBufferSource(), event.getPackedLight());
+            } else {
+                storiousRenderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
+                        event.getMultiBufferSource(), event.getPackedLight());
+            }
         } finally {
             poseStack.popPose();
         }

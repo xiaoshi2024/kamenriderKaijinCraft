@@ -16,7 +16,10 @@ public final class ModCreativeTabs {
     public static final Supplier<CreativeModeTab> MAIN = TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.kamenrider_kaijin_craft.main"))
             .icon(() -> ModItems.STORIOUS_BOOK.get().getDefaultInstance())
-            .displayItems((parameters, output) -> output.accept(ModItems.STORIOUS_BOOK.get()))
+            .displayItems((parameters, output) -> {
+                output.accept(ModItems.STORIOUS_BOOK.get());
+                output.accept(ModItems.CHARYBDIS_BOOK.get());
+            })
             .build());
 
     private ModCreativeTabs() {

@@ -2,6 +2,7 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.client.hud;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinState;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -43,10 +44,26 @@ public final class KaijinHealthOverlay {
         // 抬到护甲/氧气条上方，避免和原版左下角那一排 HUD 叠在一起
         int y = graphics.guiHeight() - 66;
 
-        int border = monster ? 0xFFE0254A : 0xFF8C1B2C;
-        int empty = monster ? 0xFF3A0510 : 0xFF28060E;
-        int from = monster ? 0xFFC51A36 : 0xFF6E1020;
-        int to = monster ? 0xFFFF3B5C : 0xFFA81A30;
+        int border;
+        int empty;
+        int from;
+        int to;
+        int textColor;
+        if (state.type() == BookKaijinType.CHARYBDIS) {
+            // 卡律布狄斯：橙金配色
+            border = monster ? 0xFFE0A93C : 0xFF8C6A24;
+            empty = monster ? 0xFF3A2405 : 0xFF2A1B07;
+            from = monster ? 0xFFC9741E : 0xFF7A5214;
+            to = monster ? 0xFFFFD063 : 0xFFB88A2A;
+            textColor = monster ? 0xFFFFEFC8 : 0xFFF0E0C0;
+        } else {
+            // 斯特利乌斯：暗红配色
+            border = monster ? 0xFFE0254A : 0xFF8C1B2C;
+            empty = monster ? 0xFF3A0510 : 0xFF28060E;
+            from = monster ? 0xFFC51A36 : 0xFF6E1020;
+            to = monster ? 0xFFFF3B5C : 0xFFA81A30;
+            textColor = monster ? 0xFFFFE0E6 : 0xFFF0D0D6;
+        }
 
         graphics.fill(x, y, x + WIDTH, y + HEIGHT, border);
         graphics.fill(x + 1, y + 1, x + WIDTH - 1, y + HEIGHT - 1, empty);
@@ -65,7 +82,6 @@ public final class KaijinHealthOverlay {
         }
 
         String text = (int) Math.ceil(health) + " / " + (int) maxHealth;
-        graphics.drawCenteredString(minecraft.font, text, x + WIDTH / 2, y + 1,
-                monster ? 0xFFFFE0E6 : 0xFFF0D0D6);
+        graphics.drawCenteredString(minecraft.font, text, x + WIDTH / 2, y + 1, textColor);
     }
 }

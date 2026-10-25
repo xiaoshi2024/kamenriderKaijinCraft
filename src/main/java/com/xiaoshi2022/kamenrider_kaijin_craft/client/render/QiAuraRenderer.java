@@ -133,6 +133,19 @@ public final class QiAuraRenderer {
             if (center.distanceToSqr(cameraPos) > 9216) {
                 continue;
             }
+            if (aura.data.channel().startsWith("slime")) {
+                // 卡律布狄斯的黏液吞噬：锚点团块 + 无锚点溅射
+                if (aura.data.anchor() >= 0) {
+                    Entity entity = world.getEntity(aura.data.anchor());
+                    if (entity != null) {
+                        slimeEngulf(stack, glow, aura, entity.getPosition(partialTick), entity.getBbWidth(),
+                                entity.getBbHeight(), partialTick, right, up, cameraPos);
+                    }
+                } else {
+                    slimeSplash(stack, glow, aura, center, partialTick, right, up);
+                }
+                continue;
+            }
             if (aura.data.anchor() >= 0) {
                 Entity entity = world.getEntity(aura.data.anchor());
                 if (entity != null && !(entity == minecraft.player
@@ -144,6 +157,176 @@ public final class QiAuraRenderer {
                 spiral(stack, glow, aura, center, aura.data.radius() * 1.1, partialTick, right, up, true);
             }
         }
+    }
+
+    // ------------------------------------------------------------ 卡律布狄斯：黏液吞噬
+
+    /** 吞噬身体的大团块数 / 朝向镜头的高光数 / 顶端尖峰数 / 溅射液滴数 */
+    private static final int SLIME_BLOBS = 26;
+    private static final int SLIME_HIGHLIGHTS = 12;
+    private static final int SLIME_SPIKES = 7;
+    private static final int SLIME_DROPS = 34;
+
+    /**
+     * 卡律布狄斯变异：紫色黏液先在地面铺开，随后鼓成比玩家还大的一团把人整个吞掉，
+     * 表面用暗紫 / 正紫 / 亮紫三层叠出体积和油亮高光，顶端拉出几条尖峰，
+     * 最后在 1 秒多的时间里缩回脚下、让怪人形态露出来。
+     */
+    private static void slimeEngulf(PoseStack stack, VertexConsumer out, Aura aura, Vec3 base,
+                                    float bodyWidth, double bodyHeight, float partialTick,
+                                    Vector3f right, Vector3f up, Vec3 cameraPos) {
+        long now = world.getGameTime();
+        float t = Math.min(1.0F, Math.max(0.0F,
+                (now + partialTick - aura.born) / (float) Math.max(1, aura.data.ticks())));
+
+        // 前 1/3 时间鼓起并吞没，中间稳定，最后一点时间缩回去
+        float grow;
+        float opacity;
+        if (t < 0.32F) {
+            float k = t / 0.32F;
+            grow = 0.25F + 0.75F * easeOut(k);
+            opacity = 0.35F + 0.65F * k;
+        } else if (t < 0.72F) {
+            grow = 1.0F;
+            opacity = 1.0F;
+        } else {
+            float k = (t - 0.72F) / 0.28F;
+            grow = 1.0F - 0.85F * k;
+            opacity = 1.0F - k;
+        }
+        if (opacity <= 0.02F) {
+            return;
+        }
+
+        int color = aura.data.color();
+        int darkR = ((color >> 16) & 255) * 42 / 100;
+        int darkG = ((color >> 8) & 255) * 42 / 100;
+        int darkB = (color & 255) * 52 / 100;
+        int midR = (color >> 16) & 255;
+        int midG = (color >> 8) & 255;
+        int midB = color & 255;
+        int hiR = Math.min(255, midR + 120);
+        int hiG = Math.min(255, midG + 120);
+        int hiB = Math.min(255, midB + 35);
+
+        double time = now + partialTick;
+        float radius = Math.max(0.85F, bodyWidth * 1.05F + 0.3F) * grow;
+        float height = (float) Math.max(1.7D, bodyHeight * 1.18D) * grow;
+        Matrix4f pose = stack.last().pose();
+
+        // 1) 地面的黏液摊开
+        for (int index = 0; index < 8; index++) {
+            float angle = hash(index * 19 + 5) * (float) (Math.PI * 2);
+            float ring = 0.6F + 0.9F * hash(index * 23 + 9);
+            float size = (0.35F + 0.35F * hash(index * 29 + 3)) * grow;
+            billboard(out, pose, right, up,
+                    (float) (base.x + Math.cos(angle) * radius * ring),
+                    (float) (base.y + 0.10D),
+                    (float) (base.z + Math.sin(angle) * radius * ring),
+                    size, darkR, darkG, darkB, (int) (opacity * 150));
+        }
+
+        // 2) 吞掉全身的团块：每个位置两层，外暗内亮
+        for (int index = 0; index < SLIME_BLOBS; index++) {
+            float seedA = hash(index * 17 + 1);
+            float seedB = hash(index * 31 + 7);
+            float seedC = hash(index * 53 + 11);
+            float seedD = hash(index * 71 + 5);
+            float angle = seedA * (float) (Math.PI * 2)
+                    + (float) (time * 0.014) * (index % 3 == 0 ? 1.0F : -1.0F);
+            float ring = 0.25F + 0.8F * seedB;
+            float wobble = (float) Math.sin(time * 0.2 + index * 1.7);
+            float px = (float) (base.x + Math.cos(angle) * radius * ring * (1.0F + 0.1F * wobble));
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring * (1.0F + 0.1F * wobble));
+            float py = (float) (base.y + 0.18D + height * (0.04F + 0.92F * seedC));
+            float size = (0.30F + 0.28F * seedD) * grow * (1.0F + 0.12F * wobble);
+            billboard(out, pose, right, up, px, py, pz, size, darkR, darkG, darkB,
+                    (int) (opacity * 205));
+            billboard(out, pose, right, up, px, py, pz, size * 0.64F, midR, midG, midB,
+                    (int) (opacity * 220));
+        }
+
+        // 3) 朝向镜头一侧的油亮高光
+        float camAngle = (float) Math.atan2(cameraPos.z - base.z, cameraPos.x - base.x);
+        for (int index = 0; index < SLIME_HIGHLIGHTS; index++) {
+            float seedA = hash(index * 13 + 2);
+            float seedB = hash(index * 41 + 6);
+            float angle = camAngle + (seedA - 0.5F) * 2.4F;
+            float ring = 0.55F + 0.45F * seedB;
+            float px = (float) (base.x + Math.cos(angle) * radius * ring);
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring);
+            float py = (float) (base.y + 0.3D + height * (0.22F + 0.72F * hash(index * 61 + 8)));
+            float size = (0.09F + 0.10F * seedB) * grow;
+            billboard(out, pose, right, up, px, py, pz, size, hiR, hiG, hiB,
+                    (int) (opacity * 235));
+        }
+
+        // 4) 顶端拉出的黏液尖峰
+        for (int index = 0; index < SLIME_SPIKES; index++) {
+            float angle = hash(index * 37 + 4) * (float) (Math.PI * 2) + (float) (time * 0.012);
+            float ring = 0.3F + 0.65F * hash(index * 43 + 10);
+            float startY = (float) (base.y + height * (0.35D + 0.25D * hash(index * 67 + 1)));
+            float endY = (float) (base.y + height * (1.0D + 0.6D * hash(index * 73 + 9)));
+            float px = (float) (base.x + Math.cos(angle) * radius * ring);
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring);
+            for (int step = 0; step < 4; step++) {
+                float k = step / 3.0F;
+                billboard(out, pose, right, up, px, startY + (endY - startY) * k, pz,
+                        (0.26F - 0.16F * k) * grow, midR, midG, midB, (int) (opacity * (200 - 40 * k)));
+            }
+        }
+    }
+
+    /** 黏液溅射：一圈向外飞散、受重力下坠的紫色液滴与深色碎屑。 */
+    private static void slimeSplash(PoseStack stack, VertexConsumer out, Aura aura, Vec3 center,
+                                    float partialTick, Vector3f right, Vector3f up) {
+        long now = world.getGameTime();
+        float elapsed = now + partialTick - aura.born;
+        float life = Math.min(1.0F, elapsed / (float) Math.max(1, aura.data.ticks()));
+        float opacity = life < 0.8F ? 1.0F : (1.0F - life) / 0.2F;
+        if (opacity <= 0.02F) {
+            return;
+        }
+
+        int color = aura.data.color();
+        int midR = (color >> 16) & 255;
+        int midG = (color >> 8) & 255;
+        int midB = color & 255;
+        int hiR = Math.min(255, midR + 110);
+        int hiG = Math.min(255, midG + 90);
+        int hiB = Math.min(255, midB + 30);
+        int darkR = midR * 35 / 100;
+        int darkG = midG * 35 / 100;
+        int darkB = midB * 45 / 100;
+
+        Matrix4f pose = stack.last().pose();
+        for (int index = 0; index < SLIME_DROPS; index++) {
+            float seedA = hash(index * 23 + 3);
+            float seedB = hash(index * 47 + 1);
+            float seedC = hash(index * 67 + 13);
+            float angle = seedA * (float) (Math.PI * 2);
+            float dist = elapsed * (0.025F + 0.055F * seedB) * (0.55F + 0.9F * seedB);
+            float rise = elapsed * (0.035F + 0.06F * seedC);
+            float fall = elapsed * elapsed * 0.0011F;
+            float px = (float) (center.x + Math.cos(angle) * dist);
+            float pz = (float) (center.z + Math.sin(angle) * dist);
+            float py = (float) (center.y + 0.85D + rise - fall);
+            float size = (0.035F + 0.055F * seedA) * (1.0F - 0.35F * life);
+            int alpha = (int) (opacity * 165);
+            if (index % 4 == 0) {
+                // 混在里面的深色碎屑
+                billboard(out, pose, right, up, px, py, pz, size * 0.75F,
+                        darkR, darkG, darkB, Math.min(255, alpha + 30));
+            } else {
+                billboard(out, pose, right, up, px, py, pz, size, hiR, hiG, hiB, alpha);
+            }
+        }
+    }
+
+    /** 先快后慢的缓出，用于黏液鼓起。 */
+    private static float easeOut(float k) {
+        float inv = 1.0F - k;
+        return 1.0F - inv * inv * inv;
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -17,6 +19,7 @@ import software.bernie.geckolib.renderer.GeoObjectRenderer;
 import software.bernie.geckolib.renderer.GeoReplacedEntityRenderer;
 import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +43,11 @@ public class StoriousBodyRenderer extends GeoReplacedEntityRenderer<AbstractClie
     private static final String ARM_ROOT_RIGHT = "RightArm";
     private static final String ARM_ROOT_LEFT = "LeftArm";
     /**
-     * 第一人称手臂的垂直偏移。1.5 是「脖子对齐」的理论值，实际看起来偏低，
-     * 往上抬一点；每 0.0625 相当于模型里的 1 像素。
+     * 第一人称手臂的换算：事件给的 PoseStack 是原版人形模型的骨骼空间
+     * （1 单位 = 1 格 / 16、y 向下、头顶在 y=0），Geo 模型是 y 向上、脚在 y=0。
+     * 与 {@code GeoArmorRenderer.actuallyRender} 完全一致的换算就是抬高 1.5 格 + x/y 取负。
      */
-    private static final double FIRST_PERSON_ARM_Y = 1.75D;
+    private static final double FIRST_PERSON_ARM_Y = 1.5D;
 
     private static final Map<UUID, StoriousBodyRenderer> RENDERERS = new HashMap<>();
     private static EntityRendererProvider.Context context;
@@ -84,21 +88,31 @@ public class StoriousBodyRenderer extends GeoReplacedEntityRenderer<AbstractClie
             }
 
             @Override
-            protected ItemDisplayContext getTransformTypeForStack(GeoBone bone, ItemStack stack,
-                                                                  StoriousAnimatable animatable) {
-                return HAND_LEFT.equals(bone.getName())
-                        ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
-                        : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
-            }
-
-            @Override
             protected void renderStackForBone(PoseStack poseStack, GeoBone bone, ItemStack stack,
                                               StoriousAnimatable animatable, MultiBufferSource bufferSource,
                                               float partialTick, int packedLight, int packedOverlay) {
-                // 骨骼枢轴在肩部，沿手臂往下偏移到手掌位置
-                poseStack.translate(HAND_LEFT.equals(bone.getName()) ? -0.125F : 0.125F, -0.62F, 0.0F);
-                super.renderStackForBone(poseStack, bone, stack, animatable, bufferSource,
-                        partialTick, packedLight, packedOverlay);
+                AbstractClientPlayer player = getCurrentEntity();
+                if (player == null || stack.isEmpty()) {
+                    return;
+                }
+                boolean left = HAND_LEFT.equals(bone.getName());
+                ItemDisplayContext context = left
+                        ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
+                        : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
+                // GeckoLib 的 renderForBone 会在 renderRecursively 已经 prep 好的骨骼矩阵上
+                // 再叠一次枢轴+旋转，等于这一根骨骼的旋转被应用了两次（R²）；
+                // 先抵消多出来的这一份，物品才会真正贴在掌心，而不是被多转一份偏进身体。
+                poseStack.mulPose(Axis.XP.rotation(-bone.getRotX()));
+                poseStack.mulPose(Axis.YP.rotation(-bone.getRotY()));
+                poseStack.mulPose(Axis.ZP.rotation(-bone.getRotZ()));
+
+                poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
+                poseStack.mulPose(Axis.YP.rotationDegrees(0.0F));
+                poseStack.translate((left ? -0.3D : 0.3D) / 16.0D, 0.1D, -0.6D);
+                // GeckoLib 默认实现把左手标志写死成 false，左手物品不会镜像，这里按原版传进去
+                Minecraft.getInstance().getItemRenderer().renderStatic(player, stack, context, left,
+                        poseStack, bufferSource, player.level(), packedLight, packedOverlay,
+                        player.getId() + context.ordinal());
             }
         });
     }
@@ -135,22 +149,34 @@ public class StoriousBodyRenderer extends GeoReplacedEntityRenderer<AbstractClie
         BakedGeoModel model = getGeoModel()
                 .getBakedModel(getGeoModel().getModelResource(this.animatable, this));
 
-        // 只留下手臂子树的顶层根（RightArm2、bone37/38 都在它下面），其余顶层骨骼隐藏
-        List<GeoBone> bones = model.topLevelBones();
+        GeoBone armBone = model.getBone(armRoot).orElse(null);
+
+        // 只留下手臂子树，其余骨骼全部隐藏；同时记录手臂子树姿态并锁定为静止姿势，
+        // 否则 idle 等动画会把手臂转出第一人称视野。
+        List<GeoBone> bones = new ArrayList<>();
+        collectBones(model.topLevelBones(), bones);
         boolean[] previousHidden = new boolean[bones.size()];
+        float[][] previousPose = new float[bones.size()][];
         for (int index = 0; index < bones.size(); index++) {
             GeoBone bone = bones.get(index);
             previousHidden[index] = bone.isHidden();
-            bone.setHidden(!armRoot.equals(bone.getName()));
+            previousPose[index] = new float[] {
+                    bone.getRotX(), bone.getRotY(), bone.getRotZ(),
+                    bone.getPosX(), bone.getPosY(), bone.getPosZ()
+            };
+            boolean armBoneOrChild = inSubtree(bone, armBone);
+            bone.setHidden(!armBoneOrChild);
+            if (armBoneOrChild) {
+                bone.updateRotation(0.0F, 0.0F, 0.0F);
+                bone.updatePosition(0.0F, 0.0F, 0.0F);
+            }
         }
 
         this.animatable.setPartialTick(partialTick);
         poseStack.pushPose();
         try {
-            // Geo 模型是 y 向上（脚在 0、脖子在 1.5 格），而第一人称手臂的 PoseStack 是原版
-            // 模型空间（y 向下、脖子在 0），这里抬高并翻转 y 与之一致
             poseStack.translate(0.0D, FIRST_PERSON_ARM_Y, 0.0D);
-            poseStack.scale(1.0F, -1.0F, 1.0F);
+            poseStack.scale(-1.0F, -1.0F, 1.0F);
 
             RenderType renderType = RenderType.entityTranslucent(StoriousEntityModel.TEXTURE);
             this.armRenderer.actuallyRender(poseStack, this.animatable, model, renderType, bufferSource,
@@ -159,9 +185,33 @@ public class StoriousBodyRenderer extends GeoReplacedEntityRenderer<AbstractClie
         } finally {
             poseStack.popPose();
             for (int index = 0; index < bones.size(); index++) {
-                bones.get(index).setHidden(previousHidden[index]);
+                GeoBone bone = bones.get(index);
+                float[] pose = previousPose[index];
+                bone.updateRotation(pose[0], pose[1], pose[2]);
+                bone.updatePosition(pose[3], pose[4], pose[5]);
+                bone.setHidden(previousHidden[index]);
             }
         }
+    }
+
+    private static void collectBones(List<GeoBone> source, List<GeoBone> target) {
+        for (GeoBone bone : source) {
+            target.add(bone);
+            collectBones(bone.getChildBones(), target);
+        }
+    }
+
+    /** bone 是否就是 root 本身或 root 的后代。 */
+    private static boolean inSubtree(GeoBone bone, @Nullable GeoBone root) {
+        if (root == null) {
+            return false;
+        }
+        for (GeoBone current = bone; current != null; current = current.getParent()) {
+            if (current == root) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

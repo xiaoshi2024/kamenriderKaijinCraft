@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinSkillPayload;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
 import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkill;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -18,8 +20,11 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Arrays;
+
 public class StoriousSkillWheelScreen extends Screen {
-    private static final StoriousSkill[] SKILLS = StoriousSkill.values();
+    /** 当前形态可用的技能：限定种类的技能（如卡律布狄斯的吞噬）只出现在对应形态里。 */
+    private StoriousSkill[] skills = StoriousSkill.values();
     private static final float GAP_DEG = 1.8F;
     private static final float OPEN_ANIMATION_LENGTH = 0.15F;
 
@@ -43,11 +48,19 @@ public class StoriousSkillWheelScreen extends Screen {
 
     @Override
     protected void init() {
+        BookKaijinType type = minecraft != null && minecraft.player != null
+                ? BookKaijinRace.typeOf(minecraft.player)
+                : BookKaijinType.STORIOUS;
+        skills = Arrays.stream(StoriousSkill.values())
+                .filter(skill -> skill.availableFor(type))
+                .toArray(StoriousSkill[]::new);
+        hovered = -1;
+
         centerX = width / 2;
         centerY = height / 2 - 6;
         outerRadius = Math.min(132.0F, Math.min(width, height) * 0.31F);
         innerRadius = outerRadius * 0.36F;
-        stepDeg = 360.0F / SKILLS.length;
+        stepDeg = 360.0F / skills.length;
     }
 
     /**
@@ -81,12 +94,12 @@ public class StoriousSkillWheelScreen extends Screen {
 
         drawRing(graphics, drawInner - 2.0F, drawOuter + 3.0F, RIM_COLOR);
 
-        for (int index = 0; index < SKILLS.length; index++) {
-            boolean cooling = ClientSkillCooldowns.remainingTicks(SKILLS[index]) > 0;
+        for (int index = 0; index < skills.length; index++) {
+            boolean cooling = ClientSkillCooldowns.remainingTicks(skills[index]) > 0;
             drawSector(graphics, midAngle(index), drawInner, drawOuter, cooling ? SLICE_COOLDOWN : SLICE_COLOR);
         }
 
-        if (hovered >= 0 && hovered < SKILLS.length) {
+        if (hovered >= 0 && hovered < skills.length) {
             drawSector(graphics, midAngle(hovered), drawInner - 1.0F, drawOuter + 1.0F, SLICE_HIGHLIGHT);
         }
 
@@ -95,8 +108,8 @@ public class StoriousSkillWheelScreen extends Screen {
         // =======================================================
 
         // 图标和文字
-        for (int index = 0; index < SKILLS.length; index++) {
-            StoriousSkill skill = SKILLS[index];
+        for (int index = 0; index < skills.length; index++) {
+            StoriousSkill skill = skills[index];
             double radians = Math.toRadians(midAngle(index));
             float iconRadius = (drawInner + drawOuter) * 0.5F + 4.0F;
             int iconX = (int) Math.round(centerX + Math.cos(radians) * iconRadius) - 8;
@@ -136,8 +149,8 @@ public class StoriousSkillWheelScreen extends Screen {
         graphics.fill(panelX - 1, panelY - 1, panelX + panelWidth + 1, panelY + panelHeight + 1, 0xFF7A1424);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF080408);
 
-        if (hovered >= 0 && hovered < SKILLS.length) {
-            StoriousSkill skill = SKILLS[hovered];
+        if (hovered >= 0 && hovered < skills.length) {
+            StoriousSkill skill = skills[hovered];
 
             // 【修复】去掉 1.05 缩放，直接按整数坐标绘制文字，避免重采样发虚
             graphics.drawCenteredString(font, skillName(skill).copy().withStyle(ChatFormatting.BOLD),
@@ -303,8 +316,8 @@ public class StoriousSkillWheelScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
             int index = sectorAt((int) mouseX, (int) mouseY);
-            if (index >= 0 && index < SKILLS.length) {
-                cast(SKILLS[index]);
+            if (index >= 0 && index < skills.length) {
+                cast(skills[index]);
                 return true;
             }
         }
@@ -318,9 +331,9 @@ public class StoriousSkillWheelScreen extends Screen {
             return true;
         }
         if (keyCode >= GLFW.GLFW_KEY_1 && keyCode <= GLFW.GLFW_KEY_3
-                && hovered >= 0 && hovered < SKILLS.length) {
+                && hovered >= 0 && hovered < skills.length) {
             int slot = keyCode - GLFW.GLFW_KEY_1;
-            StoriousSkill skill = SKILLS[hovered];
+            StoriousSkill skill = skills[hovered];
             ClientSkillBindings.bind(slot, skill);
             if (minecraft != null && minecraft.player != null) {
                 minecraft.player.displayClientMessage(Component.translatable(

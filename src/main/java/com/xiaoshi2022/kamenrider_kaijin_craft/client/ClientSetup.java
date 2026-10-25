@@ -5,6 +5,8 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.BookHeartOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinHealthOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinManaOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.SkillHotbarOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinBookCoreRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousCloneRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModEntities;
@@ -30,11 +32,13 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
         StoriousBodyRenderer.create(event.getContext());
+        CharybdisBodyRenderer.create(event.getContext());
     }
 
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.STORIOUS_CLONE.get(), StoriousCloneRenderer::new);
+        event.registerEntityRenderer(ModEntities.BOOK_CORE.get(), KaijinBookCoreRenderer::new);
     }
 
     @SubscribeEvent

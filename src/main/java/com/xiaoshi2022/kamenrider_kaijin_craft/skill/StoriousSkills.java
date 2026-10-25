@@ -4,10 +4,13 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.entity.StoriousCloneEntity;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.AntlerTendrilsPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.DarkBeamPayload;
+import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinAnimationPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.QiAuraPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.SkillCooldownPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.KaijinMana;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.Stomach;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -23,8 +26,13 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -61,6 +69,12 @@ public final class StoriousSkills {
                     "message.kamenrider_kaijin_craft.skill_need_monster"), true);
             return;
         }
+        BookKaijinType type = BookKaijinRace.typeOf(player);
+        if (!skill.availableFor(type)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.kamenrider_kaijin_craft.skill_wrong_form"), true);
+            return;
+        }
         long now = player.level().getGameTime();
         Map<StoriousSkill, Long> cooldowns = COOLDOWNS.computeIfAbsent(player.getUUID(),
                 id -> new EnumMap<>(StoriousSkill.class));
@@ -88,6 +102,7 @@ public final class StoriousSkills {
             case ANTLER_TENDRILS -> antlerTendrils(player);
             case CLONES -> clones(player);
             case BLINK -> blink(player);
+            case DEVOUR -> devour(player, type);
         }
 
         // 蓝条见底：这一发技能照常结算，随后怪人道具爆裂
@@ -335,6 +350,100 @@ public final class StoriousSkills {
                 SoundSource.PLAYERS, 1.0F, 1.2F);
         player.displayClientMessage(Component.translatable(
                 "message.kamenrider_kaijin_craft.blink_spawn"), true);
+    }
+
+    // ==================== 吞噬（卡律布狄斯） ====================
+
+    /** 吞噬的判定距离与最多同时吞下的敌人数。 */
+    private static final double DEVOUR_RANGE = 3.6D;
+    private static final int DEVOUR_MAX_TARGETS = 4;
+    /** 一次最多吞掉的方块数。 */
+    private static final int DEVOUR_MAX_BLOCKS = 16;
+
+    /**
+     * 吞噬：前方近处的生物和方块一起被吞掉。
+     * <p>
+     * 生物被送进肚子维度等消化，消化结束后击杀、掉落物入袋并回满饱食度；
+     * 方块当场结算掉落。自身同时被黏液盖住，并播放 eat 动作。
+     */
+    private static void devour(ServerPlayer player, BookKaijinType type) {
+        ServerLevel level = player.serverLevel();
+        Vec3 look = player.getLookAngle();
+        List<LivingEntity> victims = new ArrayList<>();
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(DEVOUR_RANGE),
+                e -> e != player && e.isAlive() && !isUnswallowable(e))) {
+            Vec3 offset = target.position().subtract(player.position());
+            if (offset.lengthSqr() > DEVOUR_RANGE * DEVOUR_RANGE) {
+                continue;
+            }
+            if (offset.lengthSqr() > 0.01D && offset.normalize().dot(look) < 0.35D) {
+                continue;
+            }
+            victims.add(target);
+            if (victims.size() >= DEVOUR_MAX_TARGETS) {
+                break;
+            }
+        }
+
+        List<ItemStack> blockDrops = new ArrayList<>();
+        int eatenBlocks = eatBlocks(player, look, blockDrops);
+
+        if (victims.isEmpty() && eatenBlocks == 0) {
+            player.displayClientMessage(Component.translatable(
+                    "message.kamenrider_kaijin_craft.devour_empty"), true);
+            return;
+        }
+
+        for (LivingEntity target : victims) {
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                    -1, "slime_splash", target.position(), type.qiColor(), 1.2F, 30));
+        }
+        Stomach.swallow(player, victims, blockDrops);
+        player.displayClientMessage(Component.translatable(
+                "message.kamenrider_kaijin_craft.devour_swallowed", victims.size(), eatenBlocks), true);
+        // 剧情交互：吞噬敌人 → 叙事回蓝
+        KaijinMana.award(player, "damage", 8.0F, 40);
+
+        // 自身被黏液盖住，配合 eat 动作
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                player.getId(), "slime_engulf", player.position(), type.qiColor(), 1.5F, 42));
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                new KaijinAnimationPayload(player.getId(), "eat", 45));
+        level.playSound(null, player.blockPosition(), SoundEvents.SLIME_ATTACK,
+                SoundSource.PLAYERS, 1.0F, 0.7F);
+        level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EAT,
+                SoundSource.PLAYERS, 0.9F, 0.8F);
+    }
+
+    /** 吞不掉创造/旁观模式的玩家：既杀不死，也不该把管理员关进肚子里。 */
+    private static boolean isUnswallowable(LivingEntity target) {
+        return target instanceof Player player && (player.isCreative() || player.isSpectator());
+    }
+
+    /** 吞掉正前方一小片方块，返回吞掉的方块数，掉落放进 drops。 */
+    private static int eatBlocks(ServerPlayer player, Vec3 look, List<ItemStack> drops) {
+        ServerLevel level = player.serverLevel();
+        BlockPos center = BlockPos.containing(player.position().add(look.scale(1.8D)));
+        int eaten = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-1, -1, -1), center.offset(1, 1, 1))) {
+            if (eaten >= DEVOUR_MAX_BLOCKS) {
+                break;
+            }
+            BlockState state = level.getBlockState(pos);
+            if (state.isAir() || !state.getFluidState().isEmpty() || state.hasBlockEntity()
+                    || state.getDestroySpeed(level, pos) < 0.0F) {
+                continue;
+            }
+            LootParams.Builder loot = new LootParams.Builder(level)
+                    .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
+                    .withParameter(LootContextParams.TOOL, player.getMainHandItem())
+                    .withOptionalParameter(LootContextParams.THIS_ENTITY, player);
+            drops.addAll(state.getDrops(loot));
+            level.destroyBlock(pos.immutable(), false);
+            eaten++;
+        }
+        return eaten;
     }
 
     // ==================== 光束结算 ====================

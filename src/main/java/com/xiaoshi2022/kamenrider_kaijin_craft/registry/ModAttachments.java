@@ -3,6 +3,8 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinState;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.KaijinManaState;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.StomachDigestion;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.StomachOrigin;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -35,6 +37,19 @@ public final class ModAttachments {
                     .serialize(ItemStack.OPTIONAL_CODEC)
                     .sync(ItemStack.OPTIONAL_STREAM_CODEC)
                     .copyOnDeath()
+                    .build());
+
+    /** 卡律布狄斯肚子里正在消化的批次（随玩家死亡保留，否则被吞的玩家会永远留在肚子里）。 */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<java.util.List<StomachDigestion>>> STOMACH =
+            ATTACHMENTS.register("stomach", () -> AttachmentType.<java.util.List<StomachDigestion>>builder(() -> java.util.List.<StomachDigestion>of())
+                    .serialize(StomachDigestion.CODEC.listOf())
+                    .copyOnDeath()
+                    .build());
+
+    /** 被吞玩家进肚子之前的位置：击碎核心后按它送回去，死亡时不保留。 */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<StomachOrigin>> STOMACH_ORIGIN =
+            ATTACHMENTS.register("stomach_origin", () -> AttachmentType.builder(() -> StomachOrigin.NONE)
+                    .serialize(StomachOrigin.CODEC)
                     .build());
 
     private ModAttachments() {

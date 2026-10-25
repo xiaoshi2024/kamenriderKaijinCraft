@@ -1,8 +1,8 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.item;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBookModel;
 import com.xiaoshi2022.kamenrider_kaijin_craft.inventory.FusionSlotContainer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModAttachments;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModDataComponents;
 import net.minecraft.ChatFormatting;
@@ -23,28 +23,42 @@ import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
- * 斯特利乌斯·类驾驭书（Alter Ride Book）。
- * 翻开书页即变异成斯特利乌斯怪人；此后按 G 键可以拟态回人类，再按一次变回怪物。
+ * 类驾驭书（Alter Ride Book）。
+ * 翻开书页即变异成对应的书之怪人；此后按 G 键可以拟态回人类，再按一次变回怪物。
  * <p>
  * 每本书在第一次翻开时唯一绑定一位玩家：别人拿到也用不了，同一位玩家也不能同时绑定第二本，
  * 避免靠复制道具无限制造变异来源。右键会把书收进背包里的「怪人融合槽」并完成融合。
+ * <p>
+ * 具体变成哪一只怪人由构造时传入的 {@link BookKaijinType} 决定，不同的书各自带一套物品模型。
  */
 public class AlterRideBookItem extends Item implements GeoItem, IKaijinMutationItem {
     private static final RawAnimation BOOK_IDLE = RawAnimation.begin().thenLoop("origin");
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final BookKaijinType type;
+    private final Supplier<GeoModel<AlterRideBookItem>> modelFactory;
 
-    public AlterRideBookItem(Properties properties) {
+    public AlterRideBookItem(Properties properties, BookKaijinType type,
+                             Supplier<GeoModel<AlterRideBookItem>> modelFactory) {
         super(properties);
+        this.type = type;
+        this.modelFactory = modelFactory;
         GeoItem.registerSyncedAnimatable(this);
+    }
+
+    @Override
+    public BookKaijinType kaijinType() {
+        return type;
     }
 
     @Override
@@ -106,14 +120,15 @@ public class AlterRideBookItem extends Item implements GeoItem, IKaijinMutationI
             stack.set(ModDataComponents.BOOK_OWNER.get(), player.getUUID());
             stack.set(ModDataComponents.BOOK_OWNER_NAME.get(), player.getGameProfile().getName());
         }
-        BookKaijinRace.openBook(player);
+        BookKaijinRace.openBook(player, type);
     }
 
     private static boolean hasOtherBoundBook(Player player, ItemStack current) {
         Inventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack other = inventory.getItem(slot);
-            if (other == current || other.isEmpty() || !other.is(current.getItem())) {
+            // 任何一种变异道具都算：同一位玩家只能有一本书作为心脏
+            if (other == current || other.isEmpty() || !(other.getItem() instanceof IKaijinMutationItem)) {
                 continue;
             }
             if (player.getUUID().equals(other.get(ModDataComponents.BOOK_OWNER.get()))) {
@@ -125,14 +140,14 @@ public class AlterRideBookItem extends Item implements GeoItem, IKaijinMutationI
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.kamenrider_kaijin_craft.storious_book.tooltip"));
+        tooltip.add(Component.translatable(getDescriptionId() + ".tooltip"));
         UUID owner = stack.get(ModDataComponents.BOOK_OWNER.get());
         if (owner == null) {
-            tooltip.add(Component.translatable("item.kamenrider_kaijin_craft.storious_book.unbound")
+            tooltip.add(Component.translatable(getDescriptionId() + ".unbound")
                     .withStyle(ChatFormatting.GRAY));
         } else {
             String ownerName = stack.getOrDefault(ModDataComponents.BOOK_OWNER_NAME.get(), "");
-            tooltip.add(Component.translatable("item.kamenrider_kaijin_craft.storious_book.bound", ownerName)
+            tooltip.add(Component.translatable(getDescriptionId() + ".bound", ownerName)
                     .withStyle(ChatFormatting.DARK_RED));
         }
     }
@@ -155,7 +170,7 @@ public class AlterRideBookItem extends Item implements GeoItem, IKaijinMutationI
             @Override
             public BlockEntityWithoutLevelRenderer getGeoItemRenderer() {
                 if (renderer == null) {
-                    renderer = new GeoItemRenderer<>(new StoriousBookModel());
+                    renderer = new GeoItemRenderer<>(modelFactory.get());
                 }
                 return renderer;
             }

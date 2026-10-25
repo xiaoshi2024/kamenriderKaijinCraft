@@ -24,17 +24,22 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * 书之怪物种族的服务端逻辑：翻开类驾驭书即变异，G 键在拟态（人类）与怪人形态之间切换。
- * 两个方向都会放出斯特利乌斯标志性的红色气焰。
+ * 两个方向都会放出该怪人标志性的气焰。
  */
 public final class BookKaijinRace {
-    /** 视频里斯特利乌斯变异时那股偏暗的红色气 */
-    public static final int QI_COLOR = 0xC51A36;
+    /** 默认气焰色（斯特利乌斯那股偏暗的红），蓝量爆裂等通用特效沿用这个颜色。 */
+    public static final int QI_COLOR = BookKaijinType.STORIOUS.qiColor();
 
     private BookKaijinRace() {
     }
 
     public static BookKaijinState get(Player player) {
         return player.getData(ModAttachments.BOOK_KAIJIN);
+    }
+
+    /** 当前怪人种类（客户端据此选择对应的整身渲染器与 HUD 配色）。 */
+    public static BookKaijinType typeOf(Player player) {
+        return get(player).type();
     }
 
     public static void set(Player player, BookKaijinState state) {
@@ -179,18 +184,20 @@ public final class BookKaijinRace {
         }
     }
 
-    /** 翻开书：第一次授予书之怪物种族并直接变异，之后每次翻书都重新解放怪人形态。 */
-    public static void openBook(ServerPlayer player) {
+    /**
+     * 翻开书：第一次授予书之怪物种族并直接变异，之后每次翻书都重新解放怪人形态。
+     * 怪人种类由翻开的这本书决定，因此换一本来就是换一只怪人。
+     */
+    public static void openBook(ServerPlayer player, BookKaijinType type) {
         BookKaijinState state = get(player);
         boolean firstMutation = !state.bookKaijin();
+        set(player, new BookKaijinState(true, true, type));
         if (firstMutation) {
-            set(player, new BookKaijinState(true, true));
-            player.displayClientMessage(Component.translatable("message.kamenrider_kaijin_craft.mutate"), true);
+            player.displayClientMessage(Component.translatable(type.mutationMessageKey()), true);
         } else {
-            set(player, state.withMonster(true));
             player.displayClientMessage(Component.translatable("message.kamenrider_kaijin_craft.unleash"), true);
         }
-        // award 本身幂等：第一次翻开时弹出「觉醒吧！掌管古诗的书之魔物」，之后不会再弹
+        // award 本身幂等：第一次翻开时弹出「觉醒吧！掌管故事的书之魔物」，之后不会再弹
         awardFirstMutation(player);
         burst(player, true, true);
         player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_CAST_SPELL,
@@ -210,24 +217,26 @@ public final class BookKaijinRace {
      * 这是怪人种族的维持条件：道具被销毁、丢弃、清空后就不再满足。
      */
     public static boolean hasMutationSource(Player player) {
-        if (sustains(player, player.getData(ModAttachments.FUSION_ITEM))) {
+        BookKaijinType type = typeOf(player);
+        if (sustains(player, player.getData(ModAttachments.FUSION_ITEM), type)) {
             return true;
         }
         Inventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-            if (sustains(player, inventory.getItem(slot))) {
+            if (sustains(player, inventory.getItem(slot), type)) {
                 return true;
             }
         }
-        return player.containerMenu != null && sustains(player, player.containerMenu.getCarried());
+        return player.containerMenu != null && sustains(player, player.containerMenu.getCarried(), type);
     }
 
-    private static boolean sustains(Player player, ItemStack stack) {
+    private static boolean sustains(Player player, ItemStack stack, BookKaijinType type) {
         return !stack.isEmpty() && stack.getItem() instanceof IKaijinMutationItem mutationItem
+                && mutationItem.kaijinType() == type
                 && mutationItem.sustainsRace(player, stack);
     }
 
-    /** 服务端定期校验：变异道具彻底消失后，退回人类种族。 */
+    /** 服务端校验：维持种族的那本书（同一种类）彻底消失后，退回人类种族。 */
     public static void validateMutationSource(ServerPlayer player) {
         BookKaijinState state = get(player);
         if (!state.bookKaijin() || hasMutationSource(player)) {
@@ -262,19 +271,32 @@ public final class BookKaijinRace {
     /**
      * 放气：锚定在玩家身上的气焰 + （变异时）脚下一圈外扩的气雾。
      * 实现照搬尸兄模组的 QiAuraPayload / QiAuraRenderer。
+     * <p>
+     * 卡律布狄斯的初次变异不走红气，而是派发紫色的「黏液吞噬」：一团黏液把玩家整个包住，
+     * 周围再溅出一圈液滴。
      */
     private static void burst(ServerPlayer player, boolean monster, boolean mutation) {
+        BookKaijinType type = typeOf(player);
+        if (mutation && type == BookKaijinType.CHARYBDIS) {
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                    player.getId(), "slime_engulf", player.position(), type.qiColor(), 1.5F, 64));
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                    -1, "slime_splash", player.position(), type.qiColor(), 2.8F, 58));
+            return;
+        }
+
+        int color = type.qiColor();
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
                 player.getId(),
                 mutation ? "mutate" : "mimic",
                 player.position(),
-                QI_COLOR,
+                color,
                 monster ? 1.9F : 1.3F,
                 monster ? 50 : 40));
 
         if (mutation) {
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
-                    -1, "mutate_mist", player.position(), QI_COLOR, 3.2F, 45));
+                    -1, "mutate_mist", player.position(), color, 3.2F, 45));
         }
     }
 }

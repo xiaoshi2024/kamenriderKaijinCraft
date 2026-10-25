@@ -4,6 +4,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.inventory.FusionSlotContainer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.race.KaijinMana;
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.Stomach;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModAttachments;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModDataComponents;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModItems;
@@ -54,6 +55,7 @@ public final class ServerEvents {
             BookKaijinRace.validateMutationSource(player);
             BookKaijinRace.syncAttributes(player);
             clearKrcAggro(player);
+            Stomach.tick(player);
         }
     }
 

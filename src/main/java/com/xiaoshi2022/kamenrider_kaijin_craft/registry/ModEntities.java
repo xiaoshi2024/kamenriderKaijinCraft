@@ -1,6 +1,7 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.entity.KaijinBookCoreEntity;
 import com.xiaoshi2022.kamenrider_kaijin_craft.entity.StoriousCloneEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -19,6 +20,14 @@ public final class ModEntities {
                     .sized(0.7F, 2.4F)
                     .clientTrackingRange(10)
                     .build("storious_clone"));
+
+    /** 卡律布狄斯肚子里的核心：被吞玩家打碎它才能逃出去。 */
+    public static final DeferredHolder<EntityType<?>, EntityType<KaijinBookCoreEntity>> BOOK_CORE =
+            ENTITIES.register("kaijin_book_core", () -> EntityType.Builder
+                    .of(KaijinBookCoreEntity::new, MobCategory.MONSTER)
+                    .sized(0.9F, 1.0F)
+                    .clientTrackingRange(10)
+                    .build("kaijin_book_core"));
 
     private ModEntities() {
     }

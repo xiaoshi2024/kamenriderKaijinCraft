@@ -1,0 +1,18 @@
+{
+  "type": "kamenrider_kaijin_craft:stomach",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "lakes": false,
+      "features": false,
+      "biome": "minecraft:the_void",
+      "layers": [
+        {
+          "block": "minecraft:bedrock",
+          "height": 1
+        }
+      ],
+      "structure_overrides": []
+    }
+  }
+}

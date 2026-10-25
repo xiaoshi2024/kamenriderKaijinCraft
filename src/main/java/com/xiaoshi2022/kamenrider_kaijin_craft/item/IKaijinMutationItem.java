@@ -1,5 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.item;
 
+import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -14,6 +15,9 @@ import net.minecraft.world.item.ItemStack;
  * 就会退回人类种族。
  */
 public interface IKaijinMutationItem {
+    /** 这件道具让玩家变成哪一只书之怪人。 */
+    BookKaijinType kaijinType();
+
     /** 是否允许这位玩家把该物品放进融合槽（用于绑定类道具的主人校验）。 */
     default boolean canFuse(Player player, ItemStack stack) {
         return true;

@@ -43,6 +43,13 @@ public final class ModNetwork {
                     }
                 }));
 
+        registrar.playToClient(KaijinAnimationPayload.TYPE, KaijinAnimationPayload.CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (FMLEnvironment.dist.isClient()) {
+                        com.xiaoshi2022.kamenrider_kaijin_craft.client.ClientAnimationHandler.accept(payload);
+                    }
+                }));
+
         registrar.playToClient(AntlerTendrilsPayload.TYPE, AntlerTendrilsPayload.CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     if (FMLEnvironment.dist.isClient()) {

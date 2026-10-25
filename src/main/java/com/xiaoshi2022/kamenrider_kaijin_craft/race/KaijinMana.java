@@ -107,13 +107,14 @@ public final class KaijinMana {
      * 道具销毁后无法再翻书变身，必须重新合成。
      */
     public static void explode(ServerPlayer player) {
+        BookKaijinType type = BookKaijinRace.typeOf(player);
         destroyMutationItems(player);
         BookKaijinRace.set(player, BookKaijinState.HUMAN);
         refill(player);
 
         ServerLevel level = player.serverLevel();
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
-                player.getId(), "mutate", player.position(), BookKaijinRace.QI_COLOR, 2.2F, 60));
+                player.getId(), "mutate", player.position(), type.qiColor(), 2.2F, 60));
         level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY() + 1.0D, player.getZ(),
                 8, 0.8D, 0.8D, 0.8D, 0.0D);
         level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),

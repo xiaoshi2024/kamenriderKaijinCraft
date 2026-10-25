@@ -1,5 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft;
 
+import com.xiaoshi2022.kamenrider_kaijin_craft.entity.KaijinBookCoreEntity;
 import com.xiaoshi2022.kamenrider_kaijin_craft.entity.StoriousCloneEntity;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.ModNetwork;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModAttachments;
@@ -32,5 +33,6 @@ public final class KaijinMOD {
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.STORIOUS_CLONE.get(), StoriousCloneEntity.createAttributes().build());
+        event.put(ModEntities.BOOK_CORE.get(), KaijinBookCoreEntity.createAttributes().build());
     }
 }
