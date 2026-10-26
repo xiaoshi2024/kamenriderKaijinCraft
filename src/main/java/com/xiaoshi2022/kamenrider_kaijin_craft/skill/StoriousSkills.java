@@ -60,6 +60,7 @@ public final class StoriousSkills {
 
     public static void clear(UUID playerId) {
         COOLDOWNS.remove(playerId);
+        BolhessedPowers.clear(playerId);
     }
 
     public static void use(ServerPlayer player, StoriousSkill skill) {
@@ -104,6 +105,10 @@ public final class StoriousSkills {
             case BLINK -> blink(player);
             case DEVOUR -> devour(player, type);
             case DEVOUR_SPACE -> devourSpace(player, type);
+            case BOLHESSED_ELEMENT -> BolhessedPowers.elementVolley(player);
+            case BOLHESSED_JUMP -> BolhessedPowers.enhancedJump(player);
+            case BOLHESSED_SCARF -> BolhessedPowers.scarf(player);
+            case BOLHESSED_REFLECT -> BolhessedPowers.activateReflect(player);
         }
 
         // 蓝条见底：这一发技能照常结算，随后怪人道具爆裂
@@ -580,13 +585,22 @@ public final class StoriousSkills {
 
     // ==================== 光束结算 ====================
 
-    private record BeamHit(Vec3 origin, Vec3 direction, double length, List<LivingEntity> hits) {
+    record BeamHit(Vec3 origin, Vec3 direction, double length, List<LivingEntity> hits) {
     }
 
-    private static BeamHit beam(ServerPlayer player, double maxLength, double radius, float damage, boolean knockback) {
+    static BeamHit beam(ServerPlayer player, double maxLength, double radius, float damage, boolean knockback) {
+        return beam(player, player.getLookAngle(), maxLength, radius, damage, knockback);
+    }
+
+    /**
+     * 沿指定方向结算一条瞬时贯穿光束。
+     * 波尔赫斯德的剑气与冰岩弹幕会传入自己的方向，其余技能沿用玩家的视线。
+     */
+    static BeamHit beam(ServerPlayer player, Vec3 aim, double maxLength, double radius,
+                        float damage, boolean knockback) {
         ServerLevel level = player.serverLevel();
-        Vec3 origin = player.getEyePosition().add(player.getLookAngle().scale(0.35D));
-        Vec3 direction = player.getLookAngle();
+        Vec3 direction = aim.normalize();
+        Vec3 origin = player.getEyePosition().add(direction.scale(0.35D));
         Vec3 intended = origin.add(direction.scale(maxLength));
         BlockHitResult blockHit = level.clip(new ClipContext(origin, intended,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));

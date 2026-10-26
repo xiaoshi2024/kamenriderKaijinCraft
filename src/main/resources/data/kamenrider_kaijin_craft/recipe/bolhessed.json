@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "kamenridercraft"
+    }
+  ],
+  "category": "equipment",
+  "pattern": [
+    "NGN",
+    "GLG",
+    "NGN"
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "L": {
+      "item": "kamenridercraft:legeiel_alter_ride_book"
+    }
+  },
+  "result": {
+    "id": "kamenrider_kaijin_craft:bolhessed",
+    "count": 1
+  }
+}

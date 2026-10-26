@@ -20,6 +20,7 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.STORIOUS_BOOK.get());
                 output.accept(ModItems.CHARYBDIS_BOOK.get());
                 output.accept(ModItems.LEGEIEL_BOOK.get());
+                output.accept(ModItems.BOLHESSED.get());
             })
             .build());
 

@@ -126,16 +126,52 @@ public final class KaijinSkillRenderer {
 
         Vec3 start = beam.origin.add(direction.scale(0.25D));
         Vec3 end = beam.origin.add(direction.scale(beam.length * extend));
+        // 0 黑暗箭、1 失明光线、2 金色剑气、3 冰弹、4 岩弹
         boolean dark = beam.style == 0;
+
+        // 碎块与爆闪的配色跟着光束样式走
+        int[] sparkHot = {255, 235, 250};
+        int[] sparkCool = {255, 235, 250};
+        if (dark) {
+            sparkHot = new int[]{255, 245, 245};
+            sparkCool = new int[]{255, 60, 70};
+        } else if (beam.style == 2) {
+            sparkHot = new int[]{255, 255, 240};
+            sparkCool = new int[]{255, 198, 58};
+        } else if (beam.style == 3) {
+            sparkHot = new int[]{245, 255, 255};
+            sparkCool = new int[]{96, 200, 255};
+        } else if (beam.style == 4) {
+            sparkHot = new int[]{240, 228, 210};
+            sparkCool = new int[]{150, 128, 106};
+        }
 
         VertexConsumer glow = buffers.getBuffer(RenderType.entityTranslucentEmissive(SOLID_WHITE));
 
-        // 由外到内叠四层面向相机的光带：深色轮廓 -> 红色辉光 -> 亮红 -> 白色核心
+        // 由外到内叠四层面向相机的光带：深色轮廓 -> 辉光 -> 亮色 -> 白色核心
         if (dark) {
             ribbon(glow, pose, start, end, camera, 0.62F * pulse, 0.02F, 26, 2, 8, (int) (230 * fade));
             ribbon(glow, pose, start, end, camera, 0.46F * pulse, 0.04F, 255, 32, 48, (int) (170 * fade));
             ribbon(glow, pose, start, end, camera, 0.28F * pulse, 0.06F, 255, 88, 96, (int) (215 * fade));
             ribbon(glow, pose, start, end, camera, 0.12F, 0.08F, 255, 248, 248, (int) (255 * fade));
+        } else if (beam.style == 2) {
+            // 金色剑气：扁而宽的刃光
+            ribbon(glow, pose, start, end, camera, 0.86F * pulse, 0.02F, 84, 56, 8, (int) (210 * fade));
+            ribbon(glow, pose, start, end, camera, 0.62F * pulse, 0.04F, 255, 194, 42, (int) (170 * fade));
+            ribbon(glow, pose, start, end, camera, 0.34F * pulse, 0.06F, 255, 232, 150, (int) (215 * fade));
+            ribbon(glow, pose, start, end, camera, 0.12F, 0.08F, 255, 255, 238, (int) (255 * fade));
+        } else if (beam.style == 3) {
+            // 冰弹：窄而冷的晶蓝轨迹
+            ribbon(glow, pose, start, end, camera, 0.42F * pulse, 0.02F, 16, 58, 104, (int) (190 * fade));
+            ribbon(glow, pose, start, end, camera, 0.28F * pulse, 0.04F, 92, 196, 255, (int) (185 * fade));
+            ribbon(glow, pose, start, end, camera, 0.15F, 0.06F, 176, 238, 255, (int) (220 * fade));
+            ribbon(glow, pose, start, end, camera, 0.08F, 0.08F, 244, 255, 255, (int) (255 * fade));
+        } else if (beam.style == 4) {
+            // 岩弹：厚重、带尘土感的灰褐轨迹
+            ribbon(glow, pose, start, end, camera, 0.64F * pulse, 0.02F, 38, 32, 28, (int) (220 * fade));
+            ribbon(glow, pose, start, end, camera, 0.46F * pulse, 0.04F, 126, 104, 86, (int) (190 * fade));
+            ribbon(glow, pose, start, end, camera, 0.26F, 0.06F, 176, 154, 132, (int) (215 * fade));
+            ribbon(glow, pose, start, end, camera, 0.12F, 0.08F, 232, 218, 198, (int) (255 * fade));
         } else {
             ribbon(glow, pose, start, end, camera, 0.40F * pulse, 0.02F, 255, 210, 225, (int) (170 * fade));
             ribbon(glow, pose, start, end, camera, 0.22F, 0.04F, 255, 240, 255, (int) (220 * fade));
@@ -152,7 +188,10 @@ public final class KaijinSkillRenderer {
                     .add(side.scale((noise - 0.5D) * 1.5D))
                     .add(up.scale((noise2 - 0.5D) * 1.5D));
             float size = 0.05F + 0.11F * noise2;
-            if (dark) {
+            if (beam.style >= 2) {
+                int[] color = noise > 0.55F ? sparkHot : sparkCool;
+                box(glow, pose, center, size, color[0], color[1], color[2], (int) (225 * fade));
+            } else if (dark) {
                 if (noise > 0.55F) {
                     box(glow, pose, center, size, 255, 245, 245, (int) (255 * fade));
                 } else {
@@ -167,14 +206,15 @@ public final class KaijinSkillRenderer {
         float muzzle = 1.0F - (float) Math.min(1.0D, age / 6.0D);
         if (muzzle > 0.0F) {
             box(glow, pose, beam.origin.add(direction.scale(0.3D)), 0.45F * muzzle + 0.15F,
-                    255, 240, 240, (int) (255 * fade * muzzle));
+                    sparkHot[0], sparkHot[1], sparkHot[2], (int) (255 * fade * muzzle));
         }
 
         // 命中点的爆闪
         if (extend >= 1.0F) {
             float burst = 1.0F - (float) Math.min(1.0D, (age - 2.0D) / 6.0D);
             if (burst > 0.0F) {
-                box(glow, pose, end, 0.3F + 0.4F * burst, 255, 120, 120, (int) (220 * burst * fade));
+                box(glow, pose, end, 0.3F + 0.4F * burst,
+                        sparkCool[0], sparkCool[1], sparkCool[2], (int) (220 * burst * fade));
             }
         }
     }

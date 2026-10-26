@@ -8,6 +8,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.race.Stomach;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModAttachments;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModDataComponents;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModItems;
+import com.xiaoshi2022.kamenrider_kaijin_craft.skill.BolhessedPowers;
 import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkills;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -23,6 +24,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -84,6 +86,23 @@ public final class ServerEvents {
         if (event.getSource().getEntity() instanceof ServerPlayer player) {
             KaijinMana.award(player, "damage", 5.0F, 20);
         }
+    }
+
+    /**
+     * 拉结尔的攻击反弹：反弹窗口内，任何带来源的攻击都由波尔赫斯德原样弹回。
+     * 摔落、岩浆、窒息这类无来源伤害不算「攻击」，仍然照常结算。
+     */
+    @SubscribeEvent
+    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || !BolhessedPowers.isReflecting(player)) {
+            return;
+        }
+        if (event.getSource().getEntity() == null && event.getSource().getDirectEntity() == null) {
+            return;
+        }
+        event.setCanceled(true);
+        BolhessedPowers.reflect(player, event.getSource(), event.getAmount());
     }
 
     /** 玩家下线时清掉技能冷却缓存 */
