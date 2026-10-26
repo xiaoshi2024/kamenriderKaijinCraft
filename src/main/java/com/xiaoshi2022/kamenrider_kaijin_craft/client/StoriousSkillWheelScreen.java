@@ -60,7 +60,8 @@ public class StoriousSkillWheelScreen extends Screen {
         centerY = height / 2 - 6;
         outerRadius = Math.min(132.0F, Math.min(width, height) * 0.31F);
         innerRadius = outerRadius * 0.36F;
-        stepDeg = 360.0F / skills.length;
+        // 某些形态暂时没有专属技能时，避免除以 0 得到 Infinity
+        stepDeg = skills.length == 0 ? 360.0F : 360.0F / skills.length;
     }
 
     /**

@@ -49,20 +49,31 @@ public final class KaijinHealthOverlay {
         int from;
         int to;
         int textColor;
-        if (state.type() == BookKaijinType.CHARYBDIS) {
-            // 卡律布狄斯：橙金配色
-            border = monster ? 0xFFE0A93C : 0xFF8C6A24;
-            empty = monster ? 0xFF3A2405 : 0xFF2A1B07;
-            from = monster ? 0xFFC9741E : 0xFF7A5214;
-            to = monster ? 0xFFFFD063 : 0xFFB88A2A;
-            textColor = monster ? 0xFFFFEFC8 : 0xFFF0E0C0;
-        } else {
-            // 斯特利乌斯：暗红配色
-            border = monster ? 0xFFE0254A : 0xFF8C1B2C;
-            empty = monster ? 0xFF3A0510 : 0xFF28060E;
-            from = monster ? 0xFFC51A36 : 0xFF6E1020;
-            to = monster ? 0xFFFF3B5C : 0xFFA81A30;
-            textColor = monster ? 0xFFFFE0E6 : 0xFFF0D0D6;
+        switch (state.type()) {
+            case CHARYBDIS -> {
+                // 卡律布狄斯：橙金配色
+                border = monster ? 0xFFE0A93C : 0xFF8C6A24;
+                empty = monster ? 0xFF3A2405 : 0xFF2A1B07;
+                from = monster ? 0xFFC9741E : 0xFF7A5214;
+                to = monster ? 0xFFFFD063 : 0xFFB88A2A;
+                textColor = monster ? 0xFFFFEFC8 : 0xFFF0E0C0;
+            }
+            case LEGEIEL -> {
+                // 拉结尔：金白配色
+                border = monster ? 0xFFE8C34A : 0xFF8C7A2A;
+                empty = monster ? 0xFF3A2E08 : 0xFF2A2207;
+                from = monster ? 0xFFB8902C : 0xFF7A6418;
+                to = monster ? 0xFFFFE9A0 : 0xFFB8A040;
+                textColor = monster ? 0xFFFFF6D8 : 0xFFF4ECD0;
+            }
+            default -> {
+                // 斯特利乌斯：暗红配色
+                border = monster ? 0xFFE0254A : 0xFF8C1B2C;
+                empty = monster ? 0xFF3A0510 : 0xFF28060E;
+                from = monster ? 0xFFC51A36 : 0xFF6E1020;
+                to = monster ? 0xFFFF3B5C : 0xFFA81A30;
+                textColor = monster ? 0xFFFFE0E6 : 0xFFF0D0D6;
+            }
         }
 
         graphics.fill(x, y, x + WIDTH, y + HEIGHT, border);

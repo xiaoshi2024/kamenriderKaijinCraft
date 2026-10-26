@@ -15,7 +15,9 @@ public enum BookKaijinType implements StringRepresentable {
     /** 掌管故事的书之魔物，红色气焰 */
     STORIOUS("storious", 0xC51A36, "message.kamenrider_kaijin_craft.mutate"),
     /** 海之书之怪人，紫罗兰黏液气焰 */
-    CHARYBDIS("charybdis", 0x6B3CD8, "message.kamenrider_kaijin_craft.mutate_charybdis");
+    CHARYBDIS("charybdis", 0x6B3CD8, "message.kamenrider_kaijin_craft.mutate_charybdis"),
+    /** 米吉多干部拉结尔，金色气焰 */
+    LEGEIEL("legeiel", 0xE8C34A, "message.kamenrider_kaijin_craft.mutate_legeiel");
 
     public static final Codec<BookKaijinType> CODEC = StringRepresentable.fromEnum(BookKaijinType::values);
     /** 网络同步：按序号写入，越界时夹回合法范围，避免旧包把客户端打崩。 */

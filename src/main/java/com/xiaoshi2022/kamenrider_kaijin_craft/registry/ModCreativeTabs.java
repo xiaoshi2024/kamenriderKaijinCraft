@@ -19,6 +19,7 @@ public final class ModCreativeTabs {
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.STORIOUS_BOOK.get());
                 output.accept(ModItems.CHARYBDIS_BOOK.get());
+                output.accept(ModItems.LEGEIEL_BOOK.get());
             })
             .build());
 

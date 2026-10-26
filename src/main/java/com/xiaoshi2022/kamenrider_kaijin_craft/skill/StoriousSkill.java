@@ -10,19 +10,19 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
  */
 public enum StoriousSkill {
     /** 徒手制造黑色 / 深红色的黑暗能量箭 */
-    DARK_ARROW(60, 15, BookKaijinType.STORIOUS),
+    DARK_ARROW(60, 6, BookKaijinType.STORIOUS),
     /** 双眼投射的失明光线 */
-    BLINDING_RAY(160, 25, BookKaijinType.STORIOUS),
+    BLINDING_RAY(160, 10, BookKaijinType.STORIOUS),
     /** 鹿角产生的黄色能量卷须 */
-    ANTLER_TENDRILS(200, 30, BookKaijinType.STORIOUS),
+    ANTLER_TENDRILS(200, 12, BookKaijinType.STORIOUS),
     /** 两体分身 */
-    CLONES(320, 45, BookKaijinType.STORIOUS),
+    CLONES(320, 18, BookKaijinType.STORIOUS),
     /** 瞬间传送 */
-    BLINK(100, 20, BookKaijinType.STORIOUS),
+    BLINK(100, 8, BookKaijinType.STORIOUS),
     /** 卡律布狄斯：黏液把前方的敌人整个吞下 */
-    DEVOUR(200, 25, BookKaijinType.CHARYBDIS),
+    DEVOUR(200, 10, BookKaijinType.CHARYBDIS),
     /** 卡律布狄斯：磨掉正前方一段空间，贴到目标身前或直接赶路 */
-    DEVOUR_SPACE(80, 18, BookKaijinType.CHARYBDIS);
+    DEVOUR_SPACE(80, 7, BookKaijinType.CHARYBDIS);
 
     public final int cooldownTicks;
     /** 施放一次消耗的叙事值（蓝量）。 */

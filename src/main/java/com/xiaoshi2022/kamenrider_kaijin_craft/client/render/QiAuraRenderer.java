@@ -146,6 +146,17 @@ public final class QiAuraRenderer {
                 }
                 continue;
             }
+            if (aura.data.channel().startsWith("gold")) {
+                // 拉结尔的变身气焰：外层黑烟包裹、内层金光，最后爆开
+                if (aura.data.anchor() >= 0) {
+                    Entity entity = world.getEntity(aura.data.anchor());
+                    if (entity != null) {
+                        goldEngulf(stack, glow, aura, entity.getPosition(partialTick), entity.getBbWidth(),
+                                entity.getBbHeight(), partialTick, right, up);
+                    }
+                }
+                continue;
+            }
             if (aura.data.anchor() >= 0) {
                 Entity entity = world.getEntity(aura.data.anchor());
                 if (entity != null && !(entity == minecraft.player
@@ -319,6 +330,156 @@ public final class QiAuraRenderer {
                         darkR, darkG, darkB, Math.min(255, alpha + 30));
             } else {
                 billboard(out, pose, right, up, px, py, pz, size, hiR, hiG, hiB, alpha);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ 拉结尔：黑烟金焰变身
+
+    /** 外层黑烟团块数 / 内层金光团块数 / 火焰条纹数 */
+    private static final int GOLD_SHELLS = 32;
+    private static final int GOLD_CORES = 26;
+    private static final int GOLD_STREAKS = 14;
+
+    /**
+     * 拉结尔变异：外层黑烟先裹住全身，内层金色光焰亮起，
+     * 停留一瞬后整个气团向外爆开。
+     */
+    private static void goldEngulf(PoseStack stack, VertexConsumer out, Aura aura, Vec3 base,
+                                   float bodyWidth, double bodyHeight, float partialTick,
+                                   Vector3f right, Vector3f up) {
+        long now = world.getGameTime();
+        float t = Math.min(1.0F, Math.max(0.0F,
+                (now + partialTick - aura.born) / (float) Math.max(1, aura.data.ticks())));
+
+        // 前 20%：黑烟鼓起包住身体；中段稳定；后 42%：向外爆开并消散
+        float grow;
+        float opacity;
+        float burst;
+        if (t < 0.20F) {
+            float k = t / 0.20F;
+            grow = 0.28F + 0.72F * easeOut(k);
+            opacity = 0.35F + 0.65F * k;
+            burst = 0.0F;
+        } else if (t < 0.58F) {
+            grow = 1.0F;
+            opacity = 1.0F;
+            burst = 0.0F;
+        } else {
+            float k = (t - 0.58F) / 0.42F;
+            grow = 1.0F + 2.1F * easeOut(k);
+            opacity = 1.0F - k;
+            burst = k;
+        }
+        if (opacity <= 0.02F) {
+            return;
+        }
+
+        int color = aura.data.color();
+        int goldR = (color >> 16) & 255;
+        int goldG = (color >> 8) & 255;
+        int goldB = color & 255;
+
+        double time = now + partialTick;
+        float radius = Math.max(0.55F, bodyWidth * 0.62F) * grow;
+        float height = (float) Math.max(1.8D, bodyHeight * 1.12D) * (1.0F + 0.12F * burst);
+        Matrix4f pose = stack.last().pose();
+
+        // 1) 外层黑烟：比金光大一圈，先把整个人裹住
+        for (int index = 0; index < GOLD_SHELLS; index++) {
+            float seedA = hash(index * 17 + 3);
+            float seedB = hash(index * 31 + 5);
+            float seedC = hash(index * 53 + 7);
+            float seedD = hash(index * 71 + 11);
+            float angle = seedA * (float) (Math.PI * 2)
+                    + (float) (time * 0.045) * (index % 2 == 0 ? 1.0F : -1.0F);
+            float ring = 0.72F + 0.5F * seedB;
+            float wobble = (float) Math.sin(time * 0.22 + index * 1.9);
+            float px = (float) (base.x + Math.cos(angle) * radius * ring * (1.0F + 0.08F * wobble));
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring * (1.0F + 0.08F * wobble));
+            float py = (float) (base.y + 0.12D + height * (0.02F + 0.96F * seedC));
+            float size = (0.30F + 0.26F * seedD) * grow * (1.0F + 0.12F * wobble);
+            billboard(out, pose, right, up, px, py, pz, size, 10, 8, 6,
+                    (int) (opacity * 200));
+            // 贴内一圈暗棕，避免黑边在夜里完全看不见
+            billboard(out, pose, right, up, px, py, pz, size * 0.72F, 46, 30, 14,
+                    (int) (opacity * 120));
+        }
+
+        // 2) 内层金光：贴着身体核心，亮金 + 白心形成发光感
+        for (int index = 0; index < GOLD_CORES; index++) {
+            float seedA = hash(index * 23 + 1);
+            float seedB = hash(index * 41 + 9);
+            float seedC = hash(index * 61 + 4);
+            float seedD = hash(index * 79 + 13);
+            float angle = seedA * (float) (Math.PI * 2) + (float) (time * 0.05);
+            float ring = 0.12F + 0.55F * seedB;
+            float wobble = (float) Math.sin(time * 0.26 + index * 2.3);
+            float px = (float) (base.x + Math.cos(angle) * radius * ring * (1.0F + 0.1F * wobble));
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring * (1.0F + 0.1F * wobble));
+            float py = (float) (base.y + 0.16D + height * (0.06F + 0.9F * seedC));
+            float size = (0.20F + 0.20F * seedD) * grow * (1.0F + 0.15F * wobble);
+            billboard(out, pose, right, up, px, py, pz, size, goldR, goldG, goldB,
+                    (int) (opacity * 215));
+            billboard(out, pose, right, up, px, py, pz, size * 0.56F, 255, 246, 202,
+                    (int) (opacity * 240));
+        }
+
+        // 3) 由下往上窜的火焰条纹：黑边金心
+        for (int index = 0; index < GOLD_STREAKS; index++) {
+            float seedA = hash(index * 37 + 6);
+            float seedB = hash(index * 43 + 2);
+            float angle = seedA * (float) (Math.PI * 2) + (float) (time * 0.03);
+            float ring = 0.82F + 0.32F * seedB;
+            float sway = (float) Math.sin(time * 0.24 + index * 1.3) * 0.12F;
+            float bottom = (float) (base.y + 0.08D);
+            float top = (float) (base.y + height * (0.72D + 0.42D * hash(index * 67 + 10)));
+            for (int step = 0; step < 3; step++) {
+                float k0 = step / 3.0F;
+                float k1 = (step + 1) / 3.0F;
+                float angle0 = angle + sway * k0;
+                float angle1 = angle + sway * k1;
+                float x0 = (float) (base.x + Math.cos(angle0) * radius * ring);
+                float z0 = (float) (base.z + Math.sin(angle0) * radius * ring);
+                float x1 = (float) (base.x + Math.cos(angle1) * radius * ring);
+                float z1 = (float) (base.z + Math.sin(angle1) * radius * ring);
+                float y0 = bottom + (top - bottom) * k0;
+                float y1 = bottom + (top - bottom) * k1;
+                float width = (0.11F - 0.05F * k0) * grow;
+                ribbon(out, pose, right, x0, y0, z0, x1, y1, z1, width, 10, 8, 6,
+                        (int) (opacity * 175));
+                ribbon(out, pose, right, x0, y0, z0, x1, y1, z1, width * 0.45F, goldR, goldG, goldB,
+                        (int) (opacity * 225));
+            }
+        }
+
+        // 4) 爆开瞬间：金色火舌向外炸散，中心闪一层白光
+        if (burst > 0.04F) {
+            for (int index = 0; index < GOLD_STREAKS * 2; index++) {
+                float seedA = hash(index * 29 + 3);
+                float seedB = hash(index * 47 + 7);
+                float angle = seedA * (float) (Math.PI * 2) + (float) (time * 0.06);
+                float distance = radius * (0.9F + 1.5F * burst) * (0.7F + 0.6F * seedB);
+                float px = (float) (base.x + Math.cos(angle) * distance);
+                float pz = (float) (base.z + Math.sin(angle) * distance);
+                float py = (float) (base.y + 0.2D + height * (0.15F + 0.8F * hash(index * 71 + 5)));
+                float size = (0.14F + 0.12F * seedB) * (1.0F - 0.4F * burst);
+                billboard(out, pose, right, up, px, py, pz, size, goldR, goldG, goldB,
+                        (int) (opacity * 200));
+                billboard(out, pose, right, up, px, py, pz, size * 0.5F, 255, 248, 210,
+                        (int) (opacity * 220));
+            }
+
+            float flash = (float) Math.sin(Math.PI * Math.min(1.0F, burst * 1.15F));
+            if (flash > 0.02F) {
+                for (int index = 0; index < 5; index++) {
+                    float px = (float) (base.x + (hash(index * 13 + 2) - 0.5F) * radius);
+                    float pz = (float) (base.z + (hash(index * 19 + 8) - 0.5F) * radius);
+                    float py = (float) (base.y + height * (0.3D + 0.4D * hash(index * 23 + 5)));
+                    float size = (0.55F + 0.45F * hash(index * 31 + 6)) * grow;
+                    billboard(out, pose, right, up, px, py, pz, size, 255, 251, 230,
+                            (int) (flash * 190));
+                }
             }
         }
     }

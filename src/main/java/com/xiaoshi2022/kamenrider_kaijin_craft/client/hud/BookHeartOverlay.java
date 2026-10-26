@@ -8,6 +8,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * 书之怪物的额外心脏框。
@@ -31,24 +32,47 @@ public final class BookHeartOverlay {
         if (!state.bookKaijin()) {
             return;
         }
-        boolean charybdis = state.type() == BookKaijinType.CHARYBDIS;
+        BookKaijinType type = state.type();
+        int borderRgb;
+        int glowRgb;
+        int background;
+        ItemStack icon;
+        switch (type) {
+            case CHARYBDIS -> {
+                borderRgb = 0xE09A28;
+                glowRgb = 0xB06A14;
+                background = 0xB0160A00;
+                icon = ModItems.CHARYBDIS_BOOK.get().getDefaultInstance();
+            }
+            case LEGEIEL -> {
+                borderRgb = 0xE8C34A;
+                glowRgb = 0xB0882A;
+                background = 0xB0160E00;
+                icon = ModItems.LEGEIEL_BOOK.get().getDefaultInstance();
+            }
+            default -> {
+                borderRgb = 0xE01428;
+                glowRgb = 0xB01227;
+                background = 0xB0100006;
+                icon = ModItems.STORIOUS_BOOK.get().getDefaultInstance();
+            }
+        }
 
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
         int pulse = (int) (Math.sin((player.tickCount + partialTick) * 0.35) * 0.5 + 0.5);
         int x = graphics.guiWidth() / 2 + 94;
         int y = graphics.guiHeight() - SIZE - 24;
-        // 边框 / 内光按怪人种类换色：斯特利乌斯暗红，卡律布狄斯橙金
-        int border = ((0x80 + pulse * 0x70) << 24) | (charybdis ? 0xE09A28 : 0xE01428);
-        int glow = ((0x20 + pulse * 0x28) << 24) | (charybdis ? 0xB06A14 : 0xB01227);
+        // 边框 / 内光按怪人种类换色
+        int border = ((0x80 + pulse * 0x70) << 24) | borderRgb;
+        int glow = ((0x20 + pulse * 0x28) << 24) | glowRgb;
 
-        graphics.fill(x, y, x + SIZE, y + SIZE, charybdis ? 0xB0160A00 : 0xB0100006);
+        graphics.fill(x, y, x + SIZE, y + SIZE, background);
         graphics.fill(x, y, x + SIZE, y + 1, border);
         graphics.fill(x, y + SIZE - 1, x + SIZE, y + SIZE, border);
         graphics.fill(x, y, x + 1, y + SIZE, border);
         graphics.fill(x + SIZE - 1, y, x + SIZE, y + SIZE, border);
         graphics.fill(x + 1, y + 1, x + SIZE - 1, y + SIZE - 1, glow);
 
-        graphics.renderItem((charybdis ? ModItems.CHARYBDIS_BOOK : ModItems.STORIOUS_BOOK)
-                .get().getDefaultInstance(), x + 2, y + 2);
+        graphics.renderItem(icon, x + 2, y + 2);
     }
 }

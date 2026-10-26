@@ -7,6 +7,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinManaOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.SkillHotbarOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinBookCoreRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.LegeielBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousCloneRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModEntities;
@@ -33,6 +34,7 @@ public final class ClientSetup {
     public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
         StoriousBodyRenderer.create(event.getContext());
         CharybdisBodyRenderer.create(event.getContext());
+        LegeielBodyRenderer.create(event.getContext());
     }
 
     @SubscribeEvent

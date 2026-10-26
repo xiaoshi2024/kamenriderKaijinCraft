@@ -22,6 +22,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 /**
  * 书之怪物种族的服务端逻辑：翻开类驾驭书即变异，G 键在拟态（人类）与怪人形态之间切换。
  * 两个方向都会放出该怪人标志性的气焰。
@@ -29,6 +33,18 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class BookKaijinRace {
     /** 默认气焰色（斯特利乌斯那股偏暗的红），蓝量爆裂等通用特效沿用这个颜色。 */
     public static final int QI_COLOR = BookKaijinType.STORIOUS.qiColor();
+
+    /**
+     * 变异气焰先行的时长：翻开书后气焰先铺开约 2 秒，怪人形态才真正显现，
+     * 对应原著的「气先缠身、再爆开变身」。
+     */
+    public static final int MUTATION_DELAY_TICKS = 40;
+
+    /** 正在等待气焰铺开、尚未完成变形的玩家。 */
+    private record PendingMutation(BookKaijinType type, boolean firstMutation, long readyAt) {
+    }
+
+    private static final Map<UUID, PendingMutation> PENDING_MUTATIONS = new HashMap<>();
 
     private BookKaijinRace() {
     }
@@ -185,23 +201,56 @@ public final class BookKaijinRace {
     }
 
     /**
-     * 翻开书：第一次授予书之怪物种族并直接变异，之后每次翻书都重新解放怪人形态。
-     * 怪人种类由翻开的这本书决定，因此换一本来就是换一只怪人。
+     * 翻开书：先放出该怪人的变身气焰，气焰铺开约 {@link #MUTATION_DELAY_TICKS} 刻后
+     * 才真正授予种族并完成变异。怪人种类由翻开的这本书决定，因此换一本来就是换一只怪人。
      */
     public static void openBook(ServerPlayer player, BookKaijinType type) {
         BookKaijinState state = get(player);
         boolean firstMutation = !state.bookKaijin();
+        PENDING_MUTATIONS.put(player.getUUID(), new PendingMutation(type, firstMutation,
+                player.level().getGameTime() + MUTATION_DELAY_TICKS));
+        // 先铺气焰：此时玩家还是原来的形态，气焰爆开的一刻才变身
+        burst(player, type, true, true);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_PREPARE_ATTACK,
+                SoundSource.PLAYERS, 1.0F, 0.8F);
+    }
+
+    /** 气焰铺完后真正完成变异：授予种族、提示、成就与爆裂音效。 */
+    private static void applyMutation(ServerPlayer player, BookKaijinType type, boolean firstMutation) {
         set(player, new BookKaijinState(true, true, type));
-        if (firstMutation) {
-            player.displayClientMessage(Component.translatable(type.mutationMessageKey()), true);
-        } else {
-            player.displayClientMessage(Component.translatable("message.kamenrider_kaijin_craft.unleash"), true);
-        }
+        player.displayClientMessage(Component.translatable(firstMutation
+                ? type.mutationMessageKey()
+                : "message.kamenrider_kaijin_craft.unleash"), true);
         // award 本身幂等：第一次翻开时弹出「觉醒吧！掌管故事的书之魔物」，之后不会再弹
         awardFirstMutation(player);
-        burst(player, true, true);
         player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_CAST_SPELL,
                 SoundSource.PLAYERS, 1.0F, 0.7F);
+    }
+
+    /** 每 tick 推进待完成的变异：气焰播完才真正变身。 */
+    public static void tickPendingMutation(ServerPlayer player) {
+        PendingMutation pending = PENDING_MUTATIONS.get(player.getUUID());
+        if (pending == null) {
+            return;
+        }
+        // 气焰期间书被拿走 / 玩家死亡：取消这次变身
+        if (!player.isAlive() || !hasMutationSource(player, pending.type())) {
+            PENDING_MUTATIONS.remove(player.getUUID());
+            return;
+        }
+        if (player.level().getGameTime() < pending.readyAt()) {
+            return;
+        }
+        PENDING_MUTATIONS.remove(player.getUUID());
+        applyMutation(player, pending.type(), pending.firstMutation());
+    }
+
+    /** 下线时若还停在气焰阶段，直接完成变形，避免登录后卡在未变身状态。 */
+    public static void completePendingMutation(ServerPlayer player) {
+        PendingMutation pending = PENDING_MUTATIONS.remove(player.getUUID());
+        if (pending != null) {
+            applyMutation(player, pending.type(), pending.firstMutation());
+        }
     }
 
     /** 初次变异成就：「觉醒吧！掌管古诗的书之魔物」 */
@@ -217,7 +266,10 @@ public final class BookKaijinRace {
      * 这是怪人种族的维持条件：道具被销毁、丢弃、清空后就不再满足。
      */
     public static boolean hasMutationSource(Player player) {
-        BookKaijinType type = typeOf(player);
+        return hasMutationSource(player, typeOf(player));
+    }
+
+    private static boolean hasMutationSource(Player player, BookKaijinType type) {
         if (sustains(player, player.getData(ModAttachments.FUSION_ITEM), type)) {
             return true;
         }
@@ -242,8 +294,10 @@ public final class BookKaijinRace {
         if (!state.bookKaijin() || hasMutationSource(player)) {
             return;
         }
+        BookKaijinType lostType = state.type();
+        PENDING_MUTATIONS.remove(player.getUUID());
         set(player, BookKaijinState.HUMAN);
-        burst(player, false, false);
+        burst(player, lostType, false, false);
         player.level().playSound(null, player.blockPosition(), SoundEvents.ILLUSIONER_MIRROR_MOVE,
                 SoundSource.PLAYERS, 1.0F, 1.4F);
         player.displayClientMessage(Component.translatable(
@@ -259,7 +313,7 @@ public final class BookKaijinRace {
         }
         boolean monster = !state.monster();
         set(player, state.withMonster(monster));
-        burst(player, monster, false);
+        burst(player, state.type(), monster, false);
         player.level().playSound(null, player.blockPosition(),
                 monster ? SoundEvents.EVOKER_CAST_SPELL : SoundEvents.ILLUSIONER_MIRROR_MOVE,
                 SoundSource.PLAYERS, 1.0F, monster ? 0.7F : 1.4F);
@@ -275,13 +329,18 @@ public final class BookKaijinRace {
      * 卡律布狄斯的初次变异不走红气，而是派发紫色的「黏液吞噬」：一团黏液把玩家整个包住，
      * 周围再溅出一圈液滴。
      */
-    private static void burst(ServerPlayer player, boolean monster, boolean mutation) {
-        BookKaijinType type = typeOf(player);
+    private static void burst(ServerPlayer player, BookKaijinType type, boolean monster, boolean mutation) {
         if (mutation && type == BookKaijinType.CHARYBDIS) {
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
                     player.getId(), "slime_engulf", player.position(), type.qiColor(), 1.5F, 64));
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
                     -1, "slime_splash", player.position(), type.qiColor(), 2.8F, 58));
+            return;
+        }
+        // 拉结尔：外层黑烟裹住全身、内层金光亮起，最后整个气团爆开
+        if (mutation && type == BookKaijinType.LEGEIEL) {
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new QiAuraPayload(
+                    player.getId(), "gold_engulf", player.position(), type.qiColor(), 1.6F, 70));
             return;
         }
 

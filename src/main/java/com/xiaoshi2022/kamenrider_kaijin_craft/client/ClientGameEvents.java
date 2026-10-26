@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinSkillRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.LegeielBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.QiAuraRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinSkillPayload;
@@ -100,6 +101,16 @@ public final class ClientGameEvents {
                     event.getMultiBufferSource(), event.getPackedLight());
             return;
         }
+        if (BookKaijinRace.typeOf(clientPlayer) == BookKaijinType.LEGEIEL) {
+            LegeielBodyRenderer legeiel = LegeielBodyRenderer.get(clientPlayer);
+            if (legeiel == null) {
+                return;
+            }
+            event.setCanceled(true);
+            legeiel.render(clientPlayer, clientPlayer.getYRot(), event.getPartialTick(), event.getPoseStack(),
+                    event.getMultiBufferSource(), event.getPackedLight());
+            return;
+        }
         StoriousBodyRenderer renderer = StoriousBodyRenderer.get(clientPlayer);
         if (renderer == null) {
             return;
@@ -116,10 +127,14 @@ public final class ClientGameEvents {
         if (!BookKaijinRace.isMonster(player)) {
             return;
         }
-        boolean charybdis = BookKaijinRace.typeOf(player) == BookKaijinType.CHARYBDIS;
-        StoriousBodyRenderer storiousRenderer = charybdis ? null : StoriousBodyRenderer.get(player);
-        CharybdisBodyRenderer charybdisRenderer = charybdis ? CharybdisBodyRenderer.get(player) : null;
-        if (storiousRenderer == null && charybdisRenderer == null) {
+        BookKaijinType type = BookKaijinRace.typeOf(player);
+        StoriousBodyRenderer storiousRenderer = type == BookKaijinType.STORIOUS
+                ? StoriousBodyRenderer.get(player) : null;
+        CharybdisBodyRenderer charybdisRenderer = type == BookKaijinType.CHARYBDIS
+                ? CharybdisBodyRenderer.get(player) : null;
+        LegeielBodyRenderer legeielRenderer = type == BookKaijinType.LEGEIEL
+                ? LegeielBodyRenderer.get(player) : null;
+        if (storiousRenderer == null && charybdisRenderer == null && legeielRenderer == null) {
             return;
         }
         event.setCanceled(true);
@@ -130,6 +145,9 @@ public final class ClientGameEvents {
         try {
             if (charybdisRenderer != null) {
                 charybdisRenderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
+                        event.getMultiBufferSource(), event.getPackedLight());
+            } else if (legeielRenderer != null) {
+                legeielRenderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
                         event.getMultiBufferSource(), event.getPackedLight());
             } else {
                 storiousRenderer.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,

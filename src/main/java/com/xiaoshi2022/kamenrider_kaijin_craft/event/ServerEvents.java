@@ -51,7 +51,12 @@ public final class ServerEvents {
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (event.getEntity() instanceof ServerPlayer player && player.tickCount % CHECK_INTERVAL == 0) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        // 变身气焰先行：每 tick 检查一次，气焰铺完才真正完成变异
+        BookKaijinRace.tickPendingMutation(player);
+        if (player.tickCount % CHECK_INTERVAL == 0) {
             BookKaijinRace.validateMutationSource(player);
             BookKaijinRace.syncAttributes(player);
             clearKrcAggro(player);
@@ -85,6 +90,8 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // 气焰阶段下线：直接补完变身，避免下次登录时卡在未变身状态
+            BookKaijinRace.completePendingMutation(player);
             StoriousSkills.clear(player.getUUID());
             KaijinMana.clear(player.getUUID());
         }
