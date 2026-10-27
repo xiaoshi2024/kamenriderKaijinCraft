@@ -1,6 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.mixin;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;

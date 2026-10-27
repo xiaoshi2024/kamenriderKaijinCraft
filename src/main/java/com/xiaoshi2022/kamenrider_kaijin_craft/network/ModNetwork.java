@@ -1,8 +1,8 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.network;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
-import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkill;
-import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkills;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkill;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkills;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;

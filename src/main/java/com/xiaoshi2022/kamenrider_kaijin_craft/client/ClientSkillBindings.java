@@ -1,6 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkill;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkill;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;

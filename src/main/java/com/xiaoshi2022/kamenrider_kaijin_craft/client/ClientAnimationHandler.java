@@ -1,6 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.CharybdisBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinAnimationPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;

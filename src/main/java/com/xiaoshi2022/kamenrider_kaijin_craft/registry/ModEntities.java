@@ -1,8 +1,8 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
-import com.xiaoshi2022.kamenrider_kaijin_craft.entity.KaijinBookCoreEntity;
-import com.xiaoshi2022.kamenrider_kaijin_craft.entity.StoriousCloneEntity;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.entity.KaijinBookCoreEntity;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.entity.StoriousCloneEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;

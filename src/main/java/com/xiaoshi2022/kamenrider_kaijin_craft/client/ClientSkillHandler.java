@@ -1,10 +1,10 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinSkillRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.KaijinSkillRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.AntlerTendrilsPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.DarkBeamPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.SkillCooldownPayload;
-import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkill;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkill;
 
 /** 技能网络包 → 客户端渲染缓存 / 冷却缓存，避免服务端加载任何客户端类。 */
 public final class ClientSkillHandler {

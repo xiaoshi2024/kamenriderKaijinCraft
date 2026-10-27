@@ -1,10 +1,10 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinState;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.KaijinManaState;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.StomachDigestion;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.StomachOrigin;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinState;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.KaijinManaState;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.StomachDigestion;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.StomachOrigin;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;

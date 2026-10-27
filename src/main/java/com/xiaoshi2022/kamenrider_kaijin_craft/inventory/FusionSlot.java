@@ -1,6 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.inventory;
 
-import com.xiaoshi2022.kamenrider_kaijin_craft.item.IKaijinMutationItem;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.item.IKaijinMutationItem;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;

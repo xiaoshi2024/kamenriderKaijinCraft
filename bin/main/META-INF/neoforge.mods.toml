@@ -5,6 +5,7 @@ license="MIT"
 modId="kamenrider_kaijin_craft"
 version="0.0.2beta"
 displayName="KamenRiderKaijinCraft"
+logoFile="ic.png" #optional
 authors="UFO_by_shi"
 description='''this is kamenrdier All of Kaijin'''
 [[dependencies.kamenrider_kaijin_craft]]

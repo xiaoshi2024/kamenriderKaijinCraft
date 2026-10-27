@@ -1,12 +1,12 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBookModel;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.LegeielBookModel;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBookModel;
-import com.xiaoshi2022.kamenrider_kaijin_craft.item.AlterRideBookItem;
-import com.xiaoshi2022.kamenrider_kaijin_craft.item.BolhessedItem;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinType;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.CharybdisBookModel;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.LegeielBookModel;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousBookModel;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.item.AlterRideBookItem;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.item.BolhessedItem;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.SwordItem;

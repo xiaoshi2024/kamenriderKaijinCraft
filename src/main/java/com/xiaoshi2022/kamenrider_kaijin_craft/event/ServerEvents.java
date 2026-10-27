@@ -2,14 +2,15 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.event;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.inventory.FusionSlotContainer;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.BookKaijinRace;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.KaijinMana;
-import com.xiaoshi2022.kamenrider_kaijin_craft.race.Stomach;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinType;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.KaijinMana;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.Stomach;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModAttachments;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModDataComponents;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModItems;
-import com.xiaoshi2022.kamenrider_kaijin_craft.skill.BolhessedPowers;
-import com.xiaoshi2022.kamenrider_kaijin_craft.skill.StoriousSkills;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.BolhessedPowers;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkills;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -45,6 +46,10 @@ public final class ServerEvents {
             ResourceLocation.fromNamespaceAndPath("kamenridercraft", "storious_alter_ride_book");
     private static final String KRC_PACKAGE_PREFIX = "com.kelco.kamenridercraft.";
     private static final String KRC_STORIOUS_PREFIX = "Storious";
+    /** 假面骑士工艺里的杂兵「死美」(shimi)。 */
+    private static final ResourceLocation KRC_SHIMI =
+            ResourceLocation.fromNamespaceAndPath("kamenridercraft", "shimi");
+    private static final String KRC_SHIMI_PREFIX = "Shimi";
     /** 清掉旧仇恨的搜索半径。 */
     private static final double AGGRO_CLEAR_RADIUS = 48.0D;
 
@@ -166,6 +171,11 @@ public final class ServerEvents {
         }
         if (isKrcStoriousEntity(event.getEntity())) {
             event.setCanceled(true);
+            return;
+        }
+        // 斯特利乌斯 / 拉结尔是米吉多干部，死美不会对他们动手
+        if (isMegiddoGeneral(player) && isKrcShimiEntity(event.getEntity())) {
+            event.setCanceled(true);
         }
     }
 
@@ -174,12 +184,25 @@ public final class ServerEvents {
         if (!BookKaijinRace.isMonster(player)) {
             return;
         }
+        boolean general = isMegiddoGeneral(player);
         for (Mob mob : player.level().getEntitiesOfClass(Mob.class,
                 player.getBoundingBox().inflate(AGGRO_CLEAR_RADIUS), mob -> mob.getTarget() == player)) {
-            if (isKrcStoriousEntity(mob)) {
+            if (isKrcStoriousEntity(mob) || (general && isKrcShimiEntity(mob))) {
                 mob.setTarget(null);
             }
         }
+    }
+
+    /**
+     * 斯特利乌斯与拉结尔是米吉多干部，死美视他们为上司；
+     * 卡律布狄斯只是书之怪人，不在这个豁免名单里。
+     */
+    private static boolean isMegiddoGeneral(ServerPlayer player) {
+        if (!BookKaijinRace.isMonster(player)) {
+            return false;
+        }
+        BookKaijinType type = BookKaijinRace.typeOf(player);
+        return type == BookKaijinType.STORIOUS || type == BookKaijinType.LEGEIEL;
     }
 
     private static boolean isKrcStoriousBook(ItemStack stack) {
@@ -191,5 +214,25 @@ public final class ServerEvents {
         String name = entity.getClass().getName();
         return name.startsWith(KRC_PACKAGE_PREFIX)
                 && name.substring(name.lastIndexOf('.') + 1).startsWith(KRC_STORIOUS_PREFIX);
+    }
+
+    /**
+     * 判断是不是假面骑士工艺的杂兵「死美」。
+     * <p>
+     * 优先按注册表 ID 匹配（最准，且不用加载对方的类），
+     * 认不出时再用类名兜底，兼容 ID 带后缀的变体。
+     * <p>
+     * 技能系统（号令死美）也会调用，所以对外可见。
+     */
+    public static boolean isKrcShimiEntity(Entity entity) {
+        ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        if (id != null && KRC_SHIMI.getNamespace().equals(id.getNamespace())
+                && (KRC_SHIMI.getPath().equals(id.getPath())
+                || id.getPath().startsWith(KRC_SHIMI.getPath() + "_"))) {
+            return true;
+        }
+        String name = entity.getClass().getName();
+        return name.startsWith(KRC_PACKAGE_PREFIX)
+                && name.substring(name.lastIndexOf('.') + 1).contains(KRC_SHIMI_PREFIX);
     }
 }

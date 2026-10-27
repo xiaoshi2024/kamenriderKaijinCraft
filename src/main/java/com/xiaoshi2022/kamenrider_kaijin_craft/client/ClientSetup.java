@@ -1,15 +1,15 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.BookHeartOverlay;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinHealthOverlay;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.KaijinManaOverlay;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.hud.SkillHotbarOverlay;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.CharybdisBodyRenderer;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.KaijinBookCoreRenderer;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.LegeielBodyRenderer;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousBodyRenderer;
-import com.xiaoshi2022.kamenrider_kaijin_craft.client.render.StoriousCloneRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.BookHeartOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.KaijinHealthOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.KaijinManaOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.SkillHotbarOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.CharybdisBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.KaijinBookCoreRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.LegeielBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousCloneRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModEntities;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
