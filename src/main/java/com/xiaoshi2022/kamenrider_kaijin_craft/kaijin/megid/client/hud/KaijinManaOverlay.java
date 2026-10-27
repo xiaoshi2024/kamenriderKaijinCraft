@@ -1,5 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud;
 
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.KaijinMana;
 import net.minecraft.client.DeltaTracker;
@@ -29,7 +30,7 @@ public final class KaijinManaOverlay {
                 || minecraft.gameMode == null || !minecraft.gameMode.canHurtPlayer()) {
             return;
         }
-        if (!BookKaijinRace.get(player).bookKaijin()) {
+        if (!BookKaijinRace.get(player).bookKaijin() && !AmazonRace.isAmazon(player)) {
             return;
         }
 

@@ -1,6 +1,7 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonState;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinState;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.KaijinManaState;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.StomachDigestion;
@@ -20,6 +21,14 @@ public final class ModAttachments {
             ATTACHMENTS.register("book_kaijin", () -> AttachmentType.builder(() -> BookKaijinState.HUMAN)
                     .serialize(BookKaijinState.CODEC)
                     .sync(BookKaijinState.STREAM_CODEC)
+                    .copyOnDeath()
+                    .build());
+
+    /** 亚马逊怪人种族与拟态/怪人形态，随玩家死亡保留并同步给附近客户端。 */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AmazonState>> AMAZON =
+            ATTACHMENTS.register("amazon", () -> AttachmentType.builder(() -> AmazonState.HUMAN)
+                    .serialize(AmazonState.CODEC)
+                    .sync(AmazonState.STREAM_CODEC)
                     .copyOnDeath()
                     .build());
 

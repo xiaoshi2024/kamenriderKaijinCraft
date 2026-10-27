@@ -1,6 +1,7 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.item.IKaijinMutationItem;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.QiAuraPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModAttachments;
@@ -205,6 +206,11 @@ public final class BookKaijinRace {
      * 才真正授予种族并完成变异。怪人种类由翻开的这本书决定，因此换一本来就是换一只怪人。
      */
     public static void openBook(ServerPlayer player, BookKaijinType type) {
+        if (AmazonRace.isAmazon(player)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.kamenrider_kaijin_craft.book_blocked_by_amazon"), true);
+            return;
+        }
         BookKaijinState state = get(player);
         boolean firstMutation = !state.bookKaijin();
         PENDING_MUTATIONS.put(player.getUUID(), new PendingMutation(type, firstMutation,

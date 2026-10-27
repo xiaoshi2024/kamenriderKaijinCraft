@@ -157,6 +157,17 @@ public final class QiAuraRenderer {
                 }
                 continue;
             }
+            if (aura.data.channel().startsWith("white")) {
+                // 千翼的变异白雾：一大团近白的浓雾把玩家整个罩住，随后散开
+                if (aura.data.anchor() >= 0) {
+                    Entity entity = world.getEntity(aura.data.anchor());
+                    if (entity != null) {
+                        whiteEngulf(stack, glow, aura, entity.getPosition(partialTick),
+                                entity.getBbWidth(), entity.getBbHeight(), partialTick, right, up, cameraPos);
+                    }
+                }
+                continue;
+            }
             if (aura.data.anchor() >= 0) {
                 Entity entity = world.getEntity(aura.data.anchor());
                 if (entity != null && !(entity == minecraft.player
@@ -480,6 +491,131 @@ public final class QiAuraRenderer {
                     billboard(out, pose, right, up, px, py, pz, size, 255, 251, 230,
                             (int) (flash * 190));
                 }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ 千翼：白雾吞噬
+
+    /** 雾团块数 / 朝向镜头的高光数 / 上升的雾丝数 */
+    private static final int MIST_BLOBS = 42;
+    private static final int MIST_HIGHLIGHTS = 14;
+    private static final int MIST_WISPS = 12;
+
+    /**
+     * 千翼变异：一团近白的浓雾从脚下迅速鼓起来，把玩家从头到脚完全遮住；
+     * 停留一会儿后再向外翻涌散开，雾散时 Neo Amazon Origin 的形态才显现出来。
+     */
+    private static void whiteEngulf(PoseStack stack, VertexConsumer out, Aura aura, Vec3 base,
+                                    float bodyWidth, double bodyHeight, float partialTick,
+                                    Vector3f right, Vector3f up, Vec3 cameraPos) {
+        long now = world.getGameTime();
+        float t = Math.min(1.0F, Math.max(0.0F,
+                (now + partialTick - aura.born) / (float) Math.max(1, aura.data.ticks())));
+
+        float grow;
+        float opacity;
+        if (t < 0.18F) {
+            float k = t / 0.18F;
+            grow = 0.22F + 0.82F * easeOut(k);
+            opacity = 0.40F + 0.60F * k;
+        } else if (t < 0.62F) {
+            grow = 1.04F;
+            opacity = 1.0F;
+        } else {
+            float k = (t - 0.62F) / 0.38F;
+            grow = 1.04F + 0.85F * easeOut(k);
+            opacity = 1.0F - k;
+        }
+        if (opacity <= 0.02F) {
+            return;
+        }
+
+        int color = aura.data.color();
+        int midR = (color >> 16) & 255;
+        int midG = (color >> 8) & 255;
+        int midB = color & 255;
+        int darkR = midR * 62 / 100;
+        int darkG = midG * 64 / 100;
+        int darkB = midB * 68 / 100;
+
+        double time = now + partialTick;
+        float radius = Math.max(0.95F, bodyWidth * 0.95F + 0.55F) * grow;
+        float height = (float) Math.max(1.85D, bodyHeight * 1.18D) * grow;
+        Matrix4f pose = stack.last().pose();
+
+        // 1) 地面先铺开的一圈薄雾
+        for (int index = 0; index < 10; index++) {
+            float angle = hash(index * 19 + 5) * (float) (Math.PI * 2);
+            float ring = 0.55F + 0.85F * hash(index * 23 + 9);
+            float size = (0.34F + 0.32F * hash(index * 29 + 3)) * grow;
+            billboard(out, pose, right, up,
+                    (float) (base.x + Math.cos(angle) * radius * ring),
+                    (float) (base.y + 0.08D),
+                    (float) (base.z + Math.sin(angle) * radius * ring),
+                    size, darkR, darkG, darkB, (int) (opacity * 130));
+        }
+
+        // 2) 主体雾团：三层由暗到亮叠出浓白的体积
+        for (int index = 0; index < MIST_BLOBS; index++) {
+            float seedA = hash(index * 17 + 1);
+            float seedB = hash(index * 31 + 7);
+            float seedC = hash(index * 53 + 11);
+            float seedD = hash(index * 71 + 5);
+            float angle = seedA * (float) (Math.PI * 2)
+                    + (float) (time * 0.020) * (index % 2 == 0 ? 1.0F : -1.0F);
+            float ring = 0.18F + 0.86F * seedB;
+            float wobble = (float) Math.sin(time * 0.22 + index * 1.9);
+            float px = (float) (base.x + Math.cos(angle) * radius * ring * (1.0F + 0.1F * wobble));
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring * (1.0F + 0.1F * wobble));
+            float py = (float) (base.y + 0.10D + height * (0.02F + 0.96F * seedC));
+            float size = (0.30F + 0.30F * seedD) * grow * (1.0F + 0.14F * wobble);
+            billboard(out, pose, right, up, px, py, pz, size, darkR, darkG, darkB,
+                    (int) (opacity * 175));
+            billboard(out, pose, right, up, px, py, pz, size * 0.78F, midR, midG, midB,
+                    (int) (opacity * 210));
+            billboard(out, pose, right, up, px, py, pz, size * 0.48F, 255, 255, 255,
+                    (int) (opacity * 150));
+        }
+
+        // 3) 面向镜头一侧的雾峰高光，让雾有翻滚感
+        float camAngle = (float) Math.atan2(cameraPos.z - base.z, cameraPos.x - base.x);
+        for (int index = 0; index < MIST_HIGHLIGHTS; index++) {
+            float seedA = hash(index * 13 + 2);
+            float seedB = hash(index * 41 + 6);
+            float angle = camAngle + (seedA - 0.5F) * 2.6F;
+            float ring = 0.5F + 0.5F * seedB;
+            float px = (float) (base.x + Math.cos(angle) * radius * ring);
+            float pz = (float) (base.z + Math.sin(angle) * radius * ring);
+            float py = (float) (base.y + 0.25D + height * (0.15F + 0.8F * hash(index * 61 + 8)));
+            float size = (0.24F + 0.22F * seedB) * grow;
+            billboard(out, pose, right, up, px, py, pz, size, 255, 255, 255,
+                    (int) (opacity * 185));
+        }
+
+        // 4) 从全身向上翻涌的雾丝
+        for (int index = 0; index < MIST_WISPS; index++) {
+            float seedA = hash(index * 37 + 6);
+            float seedB = hash(index * 43 + 2);
+            float angle = seedA * (float) (Math.PI * 2) + (float) (time * 0.03);
+            float ring = 0.35F + 0.62F * seedB;
+            float sway = (float) Math.sin(time * 0.26 + index * 1.3) * 0.22F;
+            float bottom = (float) (base.y + 0.08D);
+            float top = (float) (base.y + height * (0.72D + 0.4D * hash(index * 67 + 10)));
+            for (int step = 0; step < 3; step++) {
+                float k0 = step / 3.0F;
+                float k1 = (step + 1) / 3.0F;
+                float angle0 = angle + sway * k0;
+                float angle1 = angle + sway * k1;
+                float x0 = (float) (base.x + Math.cos(angle0) * radius * ring);
+                float z0 = (float) (base.z + Math.sin(angle0) * radius * ring);
+                float x1 = (float) (base.x + Math.cos(angle1) * radius * ring);
+                float z1 = (float) (base.z + Math.sin(angle1) * radius * ring);
+                float y0 = bottom + (top - bottom) * k0;
+                float y1 = bottom + (top - bottom) * k1;
+                float width = (0.12F - 0.05F * k0) * grow;
+                ribbon(out, pose, right, x0, y0, z0, x1, y1, z1, width,
+                        midR, midG, midB, (int) (opacity * 130));
             }
         }
     }

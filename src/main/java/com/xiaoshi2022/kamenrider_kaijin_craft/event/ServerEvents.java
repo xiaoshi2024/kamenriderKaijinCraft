@@ -2,6 +2,7 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.event;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
 import com.xiaoshi2022.kamenrider_kaijin_craft.inventory.FusionSlotContainer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinType;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.KaijinMana;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
@@ -50,6 +52,12 @@ public final class ServerEvents {
     private static final ResourceLocation KRC_SHIMI =
             ResourceLocation.fromNamespaceAndPath("kamenridercraft", "shimi");
     private static final String KRC_SHIMI_PREFIX = "Shimi";
+    /** 假面骑士工艺里的「亚马逊细胞突变器」。 */
+    private static final ResourceLocation KRC_AMAZON_CELL_MUTATOR =
+            ResourceLocation.fromNamespaceAndPath("kamenridercraft", "amazon_cell_mutator");
+    /** 假面骑士工艺里的「亚马逊细胞瓶」。 */
+    private static final ResourceLocation KRC_AMAZON_CELL_VIAL =
+            ResourceLocation.fromNamespaceAndPath("kamenridercraft", "amazon_cell_vial");
     /** 清掉旧仇恨的搜索半径。 */
     private static final double AGGRO_CLEAR_RADIUS = 48.0D;
 
@@ -63,9 +71,13 @@ public final class ServerEvents {
         }
         // 变身气焰先行：每 tick 检查一次，气焰铺完才真正完成变异
         BookKaijinRace.tickPendingMutation(player);
+        AmazonRace.tickPending(player);
+        AmazonRace.tickPassive(player);
         if (player.tickCount % CHECK_INTERVAL == 0) {
             BookKaijinRace.validateMutationSource(player);
             BookKaijinRace.syncAttributes(player);
+            AmazonRace.validateCell(player);
+            AmazonRace.syncAttributes(player);
             clearKrcAggro(player);
             Stomach.tick(player);
         }
@@ -74,7 +86,8 @@ public final class ServerEvents {
     /** 干部体魄：怪人形态下免疫摔落伤害。 */
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
-        if (event.getEntity() instanceof Player player && BookKaijinRace.isMonster(player)) {
+        if (event.getEntity() instanceof Player player
+                && (BookKaijinRace.isMonster(player) || AmazonRace.isMonster(player))) {
             event.setCanceled(true);
         }
     }
@@ -116,6 +129,8 @@ public final class ServerEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             // 气焰阶段下线：直接补完变身，避免下次登录时卡在未变身状态
             BookKaijinRace.completePendingMutation(player);
+            AmazonRace.completePendingMutation(player);
+            AmazonRace.clear(player.getUUID());
             StoriousSkills.clear(player.getUUID());
             KaijinMana.clear(player.getUUID());
         }
@@ -157,6 +172,40 @@ public final class ServerEvents {
         }
         // setItem 会触发 onFused → 翻开书、变异
         new FusionSlotContainer(player).setItem(0, book);
+
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
+    }
+
+    /**
+     * 软联动：在假面骑士工艺的「亚马逊细胞突变器」上右键「亚马逊细胞瓶」，
+     * 就地把它改写成我们模组的溶原性细胞，从而走「感染 → 按 G 变异」的流程。
+     * 方块与物品都只用 ID 判断，没装假面骑士工艺时这段代码不会触发。
+     */
+    @SubscribeEvent
+    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        ItemStack stack = event.getItemStack();
+        if (!isKrcAmazonCellVial(stack)) {
+            return;
+        }
+        if (!isKrcAmazonCellMutator(event.getLevel().getBlockState(event.getPos()).getBlock())) {
+            return;
+        }
+
+        if (stack.getCount() <= 1) {
+            player.setItemInHand(event.getHand(), ItemStack.EMPTY);
+        } else {
+            stack.shrink(1);
+        }
+        ItemStack cell = new ItemStack(ModItems.LYSOGENIC_CELL.get());
+        if (!player.getInventory().add(cell)) {
+            player.drop(cell, false);
+        }
+        player.displayClientMessage(Component.translatable(
+                "message.kamenrider_kaijin_craft.amazon_cell_mutated"), true);
 
         event.setCancellationResult(InteractionResult.SUCCESS);
         event.setCanceled(true);
@@ -207,6 +256,14 @@ public final class ServerEvents {
 
     private static boolean isKrcStoriousBook(ItemStack stack) {
         return !stack.isEmpty() && KRC_STORIOUS_BOOK.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    private static boolean isKrcAmazonCellVial(ItemStack stack) {
+        return !stack.isEmpty() && KRC_AMAZON_CELL_VIAL.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    private static boolean isKrcAmazonCellMutator(Block block) {
+        return KRC_AMAZON_CELL_MUTATOR.equals(BuiltInRegistries.BLOCK.getKey(block));
     }
 
     /** 只用类名判断，避免在没装假面骑士工艺时加载它的类。 */

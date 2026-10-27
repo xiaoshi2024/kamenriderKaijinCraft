@@ -1,5 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.network;
 
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkill;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkills;
@@ -18,7 +19,14 @@ public final class ModNetwork {
         registrar.playToServer(ToggleFormPayload.TYPE, ToggleFormPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {
-                        BookKaijinRace.toggle(player);
+                        // 已是亚马逊怪人 > 书之怪物 > 刚拿到溶原性细胞，优先级从高到低
+                        if (AmazonRace.isAmazon(player)) {
+                            AmazonRace.pressG(player);
+                        } else if (BookKaijinRace.get(player).bookKaijin()) {
+                            BookKaijinRace.toggle(player);
+                        } else if (AmazonRace.hasCell(player)) {
+                            AmazonRace.pressG(player);
+                        }
                     }
                 }));
 
@@ -54,6 +62,13 @@ public final class ModNetwork {
                 context.enqueueWork(() -> {
                     if (FMLEnvironment.dist.isClient()) {
                         com.xiaoshi2022.kamenrider_kaijin_craft.client.ClientSkillHandler.acceptTendrils(payload);
+                    }
+                }));
+
+        registrar.playToClient(AmazonTendrilsPayload.TYPE, AmazonTendrilsPayload.CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (FMLEnvironment.dist.isClient()) {
+                        com.xiaoshi2022.kamenrider_kaijin_craft.client.ClientAmazonHandler.accept(payload);
                     }
                 }));
 

@@ -1,6 +1,7 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.registry;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.item.LysogenicCellItem;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.CharybdisBookModel;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.LegeielBookModel;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousBookModel;
@@ -39,6 +40,13 @@ public final class ModItems {
                     .rarity(Rarity.EPIC)
                     .fireResistant()
                     .attributes(SwordItem.createAttributes(Tiers.NETHERITE, 9, -2.4F))));
+
+    /**
+     * 溶原性细胞（亚马逊怪人感染细胞）：持有者按 G 变异为千翼的 Neo Amazon Origin。
+     * 不消耗，但彻底丢失后亚马逊种族也会随之消失。
+     */
+    public static final DeferredItem<Item> LYSOGENIC_CELL = ITEMS.register("lysogenic_cell",
+            () -> new LysogenicCellItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
     private ModItems() {
     }

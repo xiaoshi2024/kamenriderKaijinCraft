@@ -1,6 +1,8 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.client.hud.AmazonHealthOverlay;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.client.render.NeoAmazonOriginBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.BookHeartOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.KaijinHealthOverlay;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.hud.KaijinManaOverlay;
@@ -26,6 +28,7 @@ public final class ClientSetup {
     private static final ResourceLocation KAIJIN_HEALTH_LAYER = KaijinMOD.id("kaijin_health");
     private static final ResourceLocation KAIJIN_MANA_LAYER = KaijinMOD.id("kaijin_mana");
     private static final ResourceLocation SKILL_HOTBAR_LAYER = KaijinMOD.id("skill_hotbar");
+    private static final ResourceLocation AMAZON_HEALTH_LAYER = KaijinMOD.id("amazon_health");
 
     private ClientSetup() {
     }
@@ -35,6 +38,7 @@ public final class ClientSetup {
         StoriousBodyRenderer.create(event.getContext());
         CharybdisBodyRenderer.create(event.getContext());
         LegeielBodyRenderer.create(event.getContext());
+        NeoAmazonOriginBodyRenderer.create(event.getContext());
     }
 
     @SubscribeEvent
@@ -57,6 +61,7 @@ public final class ClientSetup {
         event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, BOOK_HEART_LAYER, BookHeartOverlay::render);
         event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, KAIJIN_HEALTH_LAYER, KaijinHealthOverlay::render);
         event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, KAIJIN_MANA_LAYER, KaijinManaOverlay::render);
+        event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, AMAZON_HEALTH_LAYER, AmazonHealthOverlay::render);
         event.registerAboveAll(SKILL_HOTBAR_LAYER, SkillHotbarOverlay::render);
     }
 }

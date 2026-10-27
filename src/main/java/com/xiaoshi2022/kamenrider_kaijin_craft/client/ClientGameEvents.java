@@ -2,6 +2,9 @@ package com.xiaoshi2022.kamenrider_kaijin_craft.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.xiaoshi2022.kamenrider_kaijin_craft.KaijinMOD;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.client.render.AmazonTendrilRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.client.render.NeoAmazonOriginBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.CharybdisBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.KaijinSkillRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.LegeielBodyRenderer;
@@ -36,22 +39,31 @@ public final class ClientGameEvents {
     public static void onClientTick(ClientTickEvent.Post event) {
         QiAuraRenderer.tick();
         KaijinSkillRenderer.tick();
+        AmazonTendrilRenderer.tick();
         Minecraft minecraft = Minecraft.getInstance();
 
-        // G：拟态 / 解放
+        // G：拟态 / 解放（亚马逊怪人与书之怪物共用同一个键）
         while (KaijinKeys.TOGGLE_FORM.consumeClick()) {
             if (minecraft.player == null || minecraft.screen != null) {
                 continue;
             }
-            if (!BookKaijinRace.get(minecraft.player).bookKaijin()) {
+            boolean amazon = AmazonRace.isAmazon(minecraft.player) || AmazonRace.hasCell(minecraft.player);
+            if (!amazon && !BookKaijinRace.get(minecraft.player).bookKaijin()) {
                 continue;
             }
             PacketDistributor.sendToServer(ToggleFormPayload.INSTANCE);
         }
 
-        // V：技能盘（按住打开，松开关闭）
+        // V：技能盘（按住打开，松开关闭）；亚马逊怪人只有被动技能，没有技能盘
         while (KaijinKeys.SKILL_WHEEL.consumeClick()) {
             if (minecraft.player == null) {
+                continue;
+            }
+            if (AmazonRace.isAmazon(minecraft.player)) {
+                if (minecraft.screen == null) {
+                    minecraft.player.displayClientMessage(Component.translatable(
+                            "message.kamenrider_kaijin_craft.amazon_passive_hint"), true);
+                }
                 continue;
             }
             if (minecraft.screen instanceof StoriousSkillWheelScreen) {
@@ -65,6 +77,11 @@ public final class ClientGameEvents {
         for (int slot = 0; slot < KaijinKeys.QUICK_SKILLS.length; slot++) {
             while (KaijinKeys.QUICK_SKILLS[slot].consumeClick()) {
                 if (minecraft.player == null || minecraft.screen != null) {
+                    continue;
+                }
+                if (AmazonRace.isAmazon(minecraft.player)) {
+                    minecraft.player.displayClientMessage(Component.translatable(
+                            "message.kamenrider_kaijin_craft.amazon_passive_hint"), true);
                     continue;
                 }
                 if (!BookKaijinRace.get(minecraft.player).bookKaijin()) {
@@ -84,11 +101,24 @@ public final class ClientGameEvents {
         }
     }
 
-    /** 怪人形态：整身替换成对应的书之怪人。 */
+    /** 怪人形态：整身替换成对应的怪人。 */
     @SubscribeEvent
     public static void onRenderPlayer(RenderPlayerEvent.Pre event) {
         Player player = event.getEntity();
-        if (!(player instanceof AbstractClientPlayer clientPlayer) || !BookKaijinRace.isMonster(clientPlayer)) {
+        if (!(player instanceof AbstractClientPlayer clientPlayer)) {
+            return;
+        }
+        if (AmazonRace.isMonster(clientPlayer)) {
+            NeoAmazonOriginBodyRenderer amazon = NeoAmazonOriginBodyRenderer.get(clientPlayer);
+            if (amazon == null) {
+                return;
+            }
+            event.setCanceled(true);
+            amazon.render(clientPlayer, clientPlayer.getYRot(), event.getPartialTick(), event.getPoseStack(),
+                    event.getMultiBufferSource(), event.getPackedLight());
+            return;
+        }
+        if (!BookKaijinRace.isMonster(clientPlayer)) {
             return;
         }
         if (BookKaijinRace.typeOf(clientPlayer) == BookKaijinType.CHARYBDIS) {
@@ -124,6 +154,23 @@ public final class ClientGameEvents {
     @SubscribeEvent
     public static void onRenderArm(RenderArmEvent event) {
         AbstractClientPlayer player = event.getPlayer();
+        float partialTick = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+        PoseStack poseStack = event.getPoseStack();
+        if (AmazonRace.isMonster(player)) {
+            NeoAmazonOriginBodyRenderer amazon = NeoAmazonOriginBodyRenderer.get(player);
+            if (amazon == null) {
+                return;
+            }
+            event.setCanceled(true);
+            poseStack.pushPose();
+            try {
+                amazon.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
+                        event.getMultiBufferSource(), event.getPackedLight());
+            } finally {
+                poseStack.popPose();
+            }
+            return;
+        }
         if (!BookKaijinRace.isMonster(player)) {
             return;
         }
@@ -139,8 +186,6 @@ public final class ClientGameEvents {
         }
         event.setCanceled(true);
 
-        float partialTick = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
-        PoseStack poseStack = event.getPoseStack();
         poseStack.pushPose();
         try {
             if (charybdisRenderer != null) {
@@ -171,6 +216,7 @@ public final class ClientGameEvents {
         poseStack.translate(-camera.x, -camera.y, -camera.z);
         QiAuraRenderer.render(poseStack, buffers, event.getPartialTick().getGameTimeDeltaPartialTick(false));
         KaijinSkillRenderer.render(poseStack, buffers, event.getPartialTick().getGameTimeDeltaPartialTick(false));
+        AmazonTendrilRenderer.render(poseStack, buffers, event.getPartialTick().getGameTimeDeltaPartialTick(false));
         buffers.endBatch();
         poseStack.popPose();
     }

@@ -1,5 +1,6 @@
 package com.xiaoshi2022.kamenrider_kaijin_craft.mixin;
 
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.amazons.race.AmazonRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -23,7 +24,8 @@ public abstract class GuiHealthMixin {
     @Inject(method = "renderHealthLevel", at = @At("HEAD"), cancellable = true)
     private void kaijin$hideVanillaHealth(GuiGraphics graphics, CallbackInfo ci) {
         Player player = Minecraft.getInstance().player;
-        if (player != null && BookKaijinRace.get(player).bookKaijin()) {
+        if (player != null
+                && (BookKaijinRace.get(player).bookKaijin() || AmazonRace.get(player).amazon())) {
             ci.cancel();
         }
     }
