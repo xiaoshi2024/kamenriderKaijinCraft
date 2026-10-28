@@ -6,6 +6,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinState
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.KaijinManaState;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.StomachDigestion;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.StomachOrigin;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.shocker.race.ShockerState;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -29,6 +30,14 @@ public final class ModAttachments {
             ATTACHMENTS.register("amazon", () -> AttachmentType.builder(() -> AmazonState.HUMAN)
                     .serialize(AmazonState.CODEC)
                     .sync(AmazonState.STREAM_CODEC)
+                    .copyOnDeath()
+                    .build());
+
+    /** 修卡怪人种族与拟态/怪人形态，随玩家死亡保留并同步给附近客户端。 */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ShockerState>> SHOCKER =
+            ATTACHMENTS.register("shocker", () -> AttachmentType.builder(() -> ShockerState.HUMAN)
+                    .serialize(ShockerState.CODEC)
+                    .sync(ShockerState.STREAM_CODEC)
                     .copyOnDeath()
                     .build());
 

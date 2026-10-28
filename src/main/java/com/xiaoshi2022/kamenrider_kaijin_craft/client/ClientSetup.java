@@ -12,6 +12,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.Kaijin
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.LegeielBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousCloneRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.shocker.client.render.ShockerBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModEntities;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -39,6 +40,7 @@ public final class ClientSetup {
         CharybdisBodyRenderer.create(event.getContext());
         LegeielBodyRenderer.create(event.getContext());
         NeoAmazonOriginBodyRenderer.create(event.getContext());
+        ShockerBodyRenderer.create(event.getContext());
     }
 
     @SubscribeEvent

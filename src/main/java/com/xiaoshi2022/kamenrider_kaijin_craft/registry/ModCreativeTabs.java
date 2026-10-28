@@ -22,6 +22,7 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.LEGEIEL_BOOK.get());
                 output.accept(ModItems.BOLHESSED.get());
                 output.accept(ModItems.LYSOGENIC_CELL.get());
+                output.accept(ModItems.SHOCKER_EMBLEM.get());
             })
             .build());
 

@@ -12,6 +12,7 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModDataComponents;
 import com.xiaoshi2022.kamenrider_kaijin_craft.registry.ModItems;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.BolhessedPowers;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.skill.StoriousSkills;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.shocker.race.ShockerRace;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -78,6 +79,7 @@ public final class ServerEvents {
             BookKaijinRace.syncAttributes(player);
             AmazonRace.validateCell(player);
             AmazonRace.syncAttributes(player);
+            ShockerRace.validateEmblem(player);
             clearKrcAggro(player);
             Stomach.tick(player);
         }
@@ -87,7 +89,8 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
         if (event.getEntity() instanceof Player player
-                && (BookKaijinRace.isMonster(player) || AmazonRace.isMonster(player))) {
+                && (BookKaijinRace.isMonster(player) || AmazonRace.isMonster(player)
+                || ShockerRace.isMonster(player))) {
             event.setCanceled(true);
         }
     }

@@ -10,6 +10,8 @@ import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.Kaijin
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.LegeielBodyRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.QiAuraRenderer;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.client.render.StoriousBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.shocker.client.render.ShockerBodyRenderer;
+import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.shocker.race.ShockerRace;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.KaijinSkillPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.network.ToggleFormPayload;
 import com.xiaoshi2022.kamenrider_kaijin_craft.kaijin.megid.race.BookKaijinRace;
@@ -41,6 +43,7 @@ public final class ClientGameEvents {
         KaijinSkillRenderer.tick();
         AmazonTendrilRenderer.tick();
         Minecraft minecraft = Minecraft.getInstance();
+        ShockerBodyRenderer.tick(minecraft.level);
 
         // G：拟态 / 解放（亚马逊怪人与书之怪物共用同一个键）
         while (KaijinKeys.TOGGLE_FORM.consumeClick()) {
@@ -48,7 +51,8 @@ public final class ClientGameEvents {
                 continue;
             }
             boolean amazon = AmazonRace.isAmazon(minecraft.player) || AmazonRace.hasCell(minecraft.player);
-            if (!amazon && !BookKaijinRace.get(minecraft.player).bookKaijin()) {
+            boolean shocker = ShockerRace.isShocker(minecraft.player) || ShockerRace.hasEmblem(minecraft.player);
+            if (!amazon && !shocker && !BookKaijinRace.get(minecraft.player).bookKaijin()) {
                 continue;
             }
             PacketDistributor.sendToServer(ToggleFormPayload.INSTANCE);
@@ -118,6 +122,16 @@ public final class ClientGameEvents {
                     event.getMultiBufferSource(), event.getPackedLight());
             return;
         }
+        if (ShockerRace.isMonster(clientPlayer)) {
+            ShockerBodyRenderer shocker = ShockerBodyRenderer.get(clientPlayer);
+            if (shocker == null) {
+                return;
+            }
+            event.setCanceled(true);
+            shocker.render(clientPlayer, clientPlayer.getYRot(), event.getPartialTick(), event.getPoseStack(),
+                    event.getMultiBufferSource(), event.getPackedLight());
+            return;
+        }
         if (!BookKaijinRace.isMonster(clientPlayer)) {
             return;
         }
@@ -165,6 +179,21 @@ public final class ClientGameEvents {
             poseStack.pushPose();
             try {
                 amazon.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
+                        event.getMultiBufferSource(), event.getPackedLight());
+            } finally {
+                poseStack.popPose();
+            }
+            return;
+        }
+        if (ShockerRace.isMonster(player)) {
+            ShockerBodyRenderer shocker = ShockerBodyRenderer.get(player);
+            if (shocker == null) {
+                return;
+            }
+            event.setCanceled(true);
+            poseStack.pushPose();
+            try {
+                shocker.renderFirstPersonArm(poseStack, player, event.getArm(), partialTick,
                         event.getMultiBufferSource(), event.getPackedLight());
             } finally {
                 poseStack.popPose();
